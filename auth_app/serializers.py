@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from tutor.models import Teacher
-from learner.models import Parent
+from learner.models import Learner
 
 
 class GoogleSignInSerializer(serializers.Serializer):
@@ -49,9 +49,9 @@ class TutorSerializer(serializers.ModelSerializer):
 
 
 class LearnerSerializer(serializers.ModelSerializer):
-    """Serializer for Learner/Parent"""
+    """Serializer for Learner/Learner"""
     class Meta:
-        model = Parent
+        model = Learner
         fields = [
             'id', 'name', 'email', 'primary_contact', 'secondary_contact',
             'state', 'area', 'pincode', 'latitude', 'longitude',

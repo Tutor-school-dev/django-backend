@@ -33,7 +33,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     
-    'auth',
+    'auth_app',
     'tutor',
     'learner',
 ]
