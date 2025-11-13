@@ -15,7 +15,7 @@ from .serializers import (
 )
 from .services import GoogleAuthService, OTPService, TokenService
 from tutor.models import Teacher
-from learner.models import Parent
+from learner.models import Learner
 
 
 class GoogleSignInView(APIView):
@@ -54,8 +54,8 @@ class GoogleSignInView(APIView):
             user = Teacher.objects.filter(email=email).first()
             model_name = 'teacher'
         else:  # learner
-            user = Parent.objects.filter(email=email).first()
-            model_name = 'parent'
+            user = Learner.objects.filter(email=email).first()
+            model_name = 'learner'
         
         # If user doesn't exist, create temporary access hash for registration
         if not user:
@@ -81,7 +81,7 @@ class GoogleSignInView(APIView):
             'message': 'Google login successful!',
             'jwt_token': tokens['access'],
             'refresh_token': tokens['refresh'],
-            user_type: user_data,  # 'parent' or 'teacher' key
+            user_type: user_data,  # 'learner' or 'teacher' key
             'model': model_name
         }, status=status.HTTP_200_OK)
 
@@ -177,7 +177,7 @@ class OTPVerifyView(APIView):
             user_serializer = TutorSerializer(user)
         
         else:  # learner
-            user = Parent.objects.filter(primary_contact=formatted_phone).first()
+            user = Learner.objects.filter(primary_contact=formatted_phone).first()
             
             if not user:
                 # Create new learner
@@ -190,7 +190,7 @@ class OTPVerifyView(APIView):
                         status=status.HTTP_400_BAD_REQUEST
                     )
                 
-                user = Parent.objects.create(
+                user = Learner.objects.create(
                     name=name,
                     email=email,
                     primary_contact=formatted_phone,
