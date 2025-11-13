@@ -4,8 +4,8 @@ from django.contrib.gis.db.models import PointField
 from django.utils import timezone
 
 
-class Learer(models.Model):
-    """Learer/Learner model"""
+class Learner(models.Model):
+    """Learner/Learner model"""
     
     # Primary fields
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
