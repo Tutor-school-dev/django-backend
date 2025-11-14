@@ -12,10 +12,11 @@ class GoogleSignInSerializer(serializers.Serializer):
 class OTPRequestSerializer(serializers.Serializer):
     """Serializer for OTP request"""
     phone_number = serializers.CharField(required=True, max_length=20)
-    user_type = serializers.ChoiceField(choices=['tutor', 'learner'], required=True)
+    user_type = serializers.ChoiceField(choices=['tutor', 'learner'], required=False)
     use_for = serializers.ChoiceField(
         choices=['PHONE_VERIFICATION', 'LOGIN', 'RESET_PASSWORD'],
-        default='LOGIN'
+        default='LOGIN',
+        required=False
     )
 
 

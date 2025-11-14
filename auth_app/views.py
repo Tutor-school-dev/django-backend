@@ -118,7 +118,8 @@ class OTPRequestView(APIView):
         return Response({
             'message': 'OTP sent successfully',
             'expires_at': otp_obj.expires_at,
-            'phone_number': formatted_phone
+            'phone_number': formatted_phone,
+            'otp': otp_obj.otp
         }, status=status.HTTP_200_OK)
 
 
@@ -154,54 +155,26 @@ class OTPVerifyView(APIView):
             user = Teacher.objects.filter(primary_contact=formatted_phone).first()
             
             if not user:
-                # Create new tutor
-                name = serializer.validated_data.get('name')
-                email = serializer.validated_data.get('email')
-                
-                if not name:
-                    return Response(
-                        {'error': 'Name is required for new user registration'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                
                 user = Teacher.objects.create(
-                    name=name,
-                    email=email or f"{formatted_phone}@tutorschool.temp",
                     primary_contact=formatted_phone,
                     password=''  # OTP auth, no password initially
                 )
                 is_new_user = True
             else:
                 is_new_user = False
-            
-            user_serializer = TutorSerializer(user)
         
         else:  # learner
             user = Learner.objects.filter(primary_contact=formatted_phone).first()
             
             if not user:
-                # Create new learner
-                name = serializer.validated_data.get('name')
-                email = serializer.validated_data.get('email')
-                
-                if not name:
-                    return Response(
-                        {'error': 'Name is required for new user registration'},
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-                
                 user = Learner.objects.create(
-                    name=name,
-                    email=email,
                     primary_contact=formatted_phone,
                     password=''  # OTP auth, no password initially
                 )
                 is_new_user = True
             else:
                 is_new_user = False
-            
-            user_serializer = LearnerSerializer(user)
-        
+                    
         # Generate JWT tokens
         tokens = TokenService.generate_tokens(user.id, user_type)
         
@@ -209,7 +182,7 @@ class OTPVerifyView(APIView):
             'access': tokens['access'],
             'refresh': tokens['refresh'],
             'user_type': user_type,
-            'user': user_serializer.data,
+            'user': {"phone": formatted_phone},
             'is_new_user': is_new_user
         }, status=status.HTTP_200_OK)
 
