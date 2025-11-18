@@ -57,11 +57,24 @@ class GoogleSignInView(APIView):
             user = Learner.objects.filter(email=email).first()
             model_name = 'learner'
         
-        # If user doesn't exist, create temporary access hash for registration
+        # If user doesn't exist, create temporary user record and return access hash
         if not user:
-            # Generate temporary access hash
-            import secrets
-            access_hash = secrets.token_urlsafe(32)            
+            # Create temporary user record
+            if user_type == 'tutor':
+                temp_user = Teacher.objects.create(
+                    email=email,
+                    name=name,
+                    password=''  # Will be set during registration completion
+                )
+            else:
+                temp_user = Learner.objects.create(
+                    email=email,
+                    name=name,
+                    password=''
+                )
+            
+            # Generate JWT-based access hash
+            access_hash = TokenService.generate_access_hash(temp_user.id, user_type)
             
             return Response({
                 'message': 'Account creation required. Please complete registration.',
@@ -176,20 +189,19 @@ class OTPVerifyView(APIView):
             else:
                 is_new_user = False
                     
-        # Generate JWT tokens
-        tokens = TokenService.generate_tokens(user.id, user_type)
-
-        # If user doesn't exist, create temporary access hash for registration
+        # If new user, return access hash for registration completion
         if is_new_user:
-            # Generate temporary access hash
-            import secrets
-            access_hash = secrets.token_urlsafe(32)            
+            # Generate JWT-based access hash
+            access_hash = TokenService.generate_access_hash(user.id, user_type)
             
             return Response({
                 'message': 'Account creation required. Please complete registration.',
                 'access_hash': access_hash,
                 'user_type': user_type
             }, status=status.HTTP_200_OK)
+        
+        # Generate JWT tokens for existing user
+        tokens = TokenService.generate_tokens(user.id, user_type)
         
         if user_type == 'tutor':
             user_data = TutorSerializer(user).data
