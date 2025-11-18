@@ -136,4 +136,55 @@ class TokenService:
         return {
             'access': str(refresh.access_token),
             'refresh': str(refresh),
-        }
+        }    
+    @staticmethod
+    def generate_access_hash(user_id, user_type):
+        """
+        Generate temporary access hash (JWT) for account registration
+        
+        Args:
+            user_id: User UUID
+            user_type: 'tutor' or 'learner'
+            
+        Returns:
+            str: JWT access hash containing user_id and user_type
+        """
+        from datetime import timedelta
+        from rest_framework_simplejwt.tokens import AccessToken
+        
+        token = AccessToken()
+        token['user_id'] = str(user_id)
+        token['user_type'] = user_type
+        token['is_access_hash'] = True
+        # Set short expiry for access hash (30 minutes)
+        token.set_exp(lifetime=timedelta(minutes=30))
+        
+        return str(token)
+    
+    @staticmethod
+    def verify_access_hash(access_hash):
+        """
+        Verify and decode access hash JWT
+        
+        Args:
+            access_hash: JWT access hash string
+            
+        Returns:
+            dict: Decoded token payload with user_id and user_type, or None if invalid
+        """
+        from rest_framework_simplejwt.tokens import AccessToken
+        from rest_framework_simplejwt.exceptions import TokenError
+        
+        try:
+            token = AccessToken(access_hash)
+            
+            # Verify it's an access hash token
+            if not token.get('is_access_hash', False):
+                return None
+            
+            return {
+                'user_id': token.get('user_id'),
+                'user_type': token.get('user_type'),
+            }
+        except TokenError:
+            return None
