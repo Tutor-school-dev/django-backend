@@ -18,7 +18,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = ["*", "stagingapi.tutorschool.in"]
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -142,5 +143,5 @@ OTP_EXPIRY_MINUTES = 10
 OTP_LENGTH = 6
 
 # CORS
-CORS_ALLOWED_ORIGINS = config('CORS_ALLOWED_ORIGINS', default='http://localhost:3000').split(',')
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True  
