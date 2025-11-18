@@ -7,6 +7,12 @@ from django.utils import timezone
 class Learner(models.Model):
     """Learner/Learner model"""
     
+    PREFERRED_MODES = (
+        ('Online', 'Online'),
+        ('Offline', 'Offline'),
+        ('Both', 'Both'),
+    )
+    
     # Primary fields
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     zoho_id = models.CharField(max_length=255, null=True, blank=True)
@@ -31,6 +37,7 @@ class Learner(models.Model):
     guardian_email = models.EmailField(null=True, blank=True)
     subjects = models.TextField(null=True, blank=True)  # JSON string or comma-separated
     budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    preferred_mode = models.CharField(max_length=10, choices=PREFERRED_MODES, null=True, blank=True)
     
     # Security
     password_last_modified = models.DateTimeField(null=True, blank=True)
