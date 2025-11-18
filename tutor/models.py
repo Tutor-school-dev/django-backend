@@ -39,6 +39,9 @@ class Teacher(models.Model):
     current_status = models.CharField(max_length=255, null=True, blank=True)
     teaching_mode = models.CharField(max_length=10, choices=TEACHING_MODES, default='BOTH')
     referral = models.CharField(max_length=255, null=True, blank=True)
+    university = models.CharField(max_length=255, null=True, blank=True)
+    class_level = models.CharField(max_length=255, null=True, blank=True)
+    degree = models.CharField(max_length=255, null=True, blank=True)
     
     # Subscription & security
     subscription_validity = models.DateTimeField(null=True, blank=True)
