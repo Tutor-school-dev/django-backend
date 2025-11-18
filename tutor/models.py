@@ -19,7 +19,7 @@ class Teacher(models.Model):
     name = models.CharField(max_length=255)
     primary_contact = models.CharField(max_length=20, unique=True)
     secondary_contact = models.CharField(max_length=20, null=True, blank=True)
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=True, null=True, blank=True)
     password = models.CharField(max_length=255)
     
     # Location fields

@@ -177,6 +177,19 @@ class OTPVerifyView(APIView):
                     
         # Generate JWT tokens
         tokens = TokenService.generate_tokens(user.id, user_type)
+
+        # If user doesn't exist, create temporary access hash for registration
+        if is_new_user:
+            # Generate temporary access hash
+            import secrets
+            access_hash = secrets.token_urlsafe(32)            
+            
+            return Response({
+                'message': 'Account creation required. Please complete registration.',
+                'access_hash': access_hash,
+                'user_type': user_type
+            }, status=status.HTTP_200_OK)
+        
         
         return Response({
             'access': tokens['access'],
