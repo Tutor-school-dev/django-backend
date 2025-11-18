@@ -84,6 +84,80 @@ class TutorSerializer(serializers.ModelSerializer):
             'profile_pic', 'introduction', 'teaching_desc', 'lesson_price',
             'teaching_mode', 'subscription_validity',
             'basic_done', 'location_done', 'later_onboarding_done',
+            'class_level', 'current_status', 'degree', 'university', 'referral',
             'created_at'
         ]
         read_only_fields = ['id', 'created_at']
+
+
+class AddTutorDetailsSerializer(serializers.Serializer):
+    """Serializer for adding additional tutor details"""
+    
+    TEACHING_MODES = ['ONLINE', 'OFFLINE', 'BOTH']
+    
+    # Academic details
+    class_field = serializers.CharField(
+        required=True, 
+        max_length=50,
+        source='class'  # Maps to 'class' field in request but uses different name to avoid Python keyword
+    )
+    current_status = serializers.CharField(required=True, max_length=255)
+    degree = serializers.CharField(required=True, max_length=255)
+    university = serializers.CharField(required=True, max_length=255)
+    
+    # Teaching preferences
+    referral = serializers.CharField(required=True, max_length=255)
+    teaching_mode = serializers.ChoiceField(
+        required=True,
+        choices=TEACHING_MODES,
+        error_messages={'invalid_choice': 'Teaching mode must be one of: ONLINE, OFFLINE, BOTH'}
+    )
+    
+    # Location details
+    area = serializers.CharField(required=True, max_length=255)
+    state = serializers.CharField(required=True, max_length=255)
+    pincode = serializers.CharField(required=True, max_length=10)
+    latitude = serializers.DecimalField(
+        required=True,
+        max_digits=10,
+        decimal_places=7,
+        min_value=-90,
+        max_value=90
+    )
+    longitude = serializers.DecimalField(
+        required=True,
+        max_digits=10,
+        decimal_places=7,
+        min_value=-180,
+        max_value=180
+    )
+    
+    def validate_pincode(self, value):
+        """Validate pincode format"""
+        if not re.match(r'^\d{6}$', value):
+            raise serializers.ValidationError("Pincode must be exactly 6 digits")
+        return value
+    
+    def validate_class_field(self, value):
+        """Validate class field"""
+        if not value.strip():
+            raise serializers.ValidationError("Class cannot be empty")
+        return value.strip()
+    
+    def validate_current_status(self, value):
+        """Validate current status"""
+        if not value.strip():
+            raise serializers.ValidationError("Current status cannot be empty")
+        return value.strip()
+    
+    def validate_degree(self, value):
+        """Validate degree"""
+        if not value.strip():
+            raise serializers.ValidationError("Degree cannot be empty")
+        return value.strip()
+    
+    def validate_university(self, value):
+        """Validate university"""
+        if not value.strip():
+            raise serializers.ValidationError("University cannot be empty")
+        return value.strip()
