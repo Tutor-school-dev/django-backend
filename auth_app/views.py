@@ -11,7 +11,8 @@ from .serializers import (
     OTPVerifySerializer,
     TutorSerializer,
     LearnerSerializer,
-    TokenResponseSerializer
+    TokenResponseSerializer,
+    TutorLoginSerializer
 )
 from .services import GoogleAuthService, OTPService, TokenService
 from tutor.models import Teacher
@@ -241,3 +242,62 @@ class TokenRefreshView(APIView):
                 {'error': 'Invalid or expired refresh token'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
+
+class TutorLoginView(APIView):
+    """Handle tutor login via email and password"""
+    permission_classes = [AllowAny]
+    
+    def post(self, request):
+        """
+        Authenticate tutor with email and password
+        
+        Expected body:
+        {
+            "email": "tutor@example.com",
+            "password": "SecurePass123@"
+        }
+        """
+        serializer = TutorLoginSerializer(data=request.data)
+        
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        email = serializer.validated_data['email']
+        password = serializer.validated_data['password']
+        
+        # Find tutor by email
+        try:
+            teacher = Teacher.objects.get(email=email)
+        except Teacher.DoesNotExist:
+            return Response(
+                {'error': 'Invalid email or password'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Verify password
+        if not teacher.check_password(password):
+            return Response(
+                {'error': 'Invalid email or password'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Check if account is fully set up
+        if not teacher.password:
+            return Response(
+                {'error': 'Account not fully set up. Please complete registration.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generate JWT tokens
+        tokens = TokenService.generate_tokens(teacher.id, 'tutor')
+        
+        # Serialize teacher data
+        teacher_data = TutorSerializer(teacher).data
+        
+        return Response({
+            'message': 'Login successful',
+            'jwt_token': tokens['access'],
+            'refresh': tokens['refresh'],
+            'user_type': 'tutor',
+            'teacher': teacher_data
+        }, status=status.HTTP_200_OK)

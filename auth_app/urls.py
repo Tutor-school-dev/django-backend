@@ -3,7 +3,8 @@ from .views import (
     GoogleSignInView,
     OTPRequestView,
     OTPVerifyView,
-    TokenRefreshView
+    TokenRefreshView,
+    TutorLoginView
 )
 
 urlpatterns = [
@@ -11,4 +12,5 @@ urlpatterns = [
     path('otp/request/', OTPRequestView.as_view(), name='otp-request'),
     path('otp/verify/', OTPVerifyView.as_view(), name='otp-verify'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
+    path('tutor/login/', TutorLoginView.as_view(), name='tutor-login'),
 ]

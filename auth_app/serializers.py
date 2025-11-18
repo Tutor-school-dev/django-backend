@@ -69,3 +69,12 @@ class TokenResponseSerializer(serializers.Serializer):
     refresh = serializers.CharField()
     user_type = serializers.CharField()
     user = serializers.DictField()
+
+class TutorLoginSerializer(serializers.Serializer):
+    """Serializer for tutor login via email and password"""
+    email = serializers.EmailField(required=True)
+    password = serializers.CharField(required=True, write_only=True, min_length=1)
+    
+    def validate_email(self, value):
+        """Normalize email to lowercase"""
+        return value.lower().strip()
