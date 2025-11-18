@@ -70,6 +70,7 @@ class GoogleSignInView(APIView):
             }, status=status.HTTP_200_OK)
         
         # Existing user - generate JWT token
+
         tokens = TokenService.generate_tokens(user.id, user_type)
         
         if user_type == 'tutor':
@@ -78,11 +79,11 @@ class GoogleSignInView(APIView):
             user_data = LearnerSerializer(user).data
         
         return Response({
-            'message': 'Google login successful!',
             'jwt_token': tokens['access'],
-            'refresh_token': tokens['refresh'],
-            user_type: user_data,  # 'learner' or 'teacher' key
-            'model': model_name
+            'refresh': tokens['refresh'],
+            'user_type': user_type,
+            'user': user_data,
+            'go_to_dashboard': True
         }, status=status.HTTP_200_OK)
 
 
@@ -190,13 +191,17 @@ class OTPVerifyView(APIView):
                 'user_type': user_type
             }, status=status.HTTP_200_OK)
         
-        
+        if user_type == 'tutor':
+            user_data = TutorSerializer(user).data
+        else:
+            user_data = LearnerSerializer(user).data
+
         return Response({
-            'access': tokens['access'],
+            'jwt_token': tokens['access'],
             'refresh': tokens['refresh'],
             'user_type': user_type,
-            'user': {"phone": formatted_phone},
-            'is_new_user': is_new_user
+            'user': user_data,
+            'go_to_dashboard': True
         }, status=status.HTTP_200_OK)
 
 
