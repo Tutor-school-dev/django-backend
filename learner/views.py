@@ -5,6 +5,8 @@ from rest_framework.permissions import AllowAny
 from django.contrib.gis.geos import Point
 import json
 
+from admin_app.models import JobListing
+
 from .models import Learner
 from .serializers import CreateLearnerAccountSerializer, LearnerSerializer
 from auth_app.services import TokenService
@@ -116,6 +118,12 @@ class CreateLearnerAccountView(APIView):
         
         # Serialize learner data
         learner_data = LearnerSerializer(learner).data
+
+        # Create a job listing for the learner
+        try:
+            JobListing.objects.create(learner=learner)
+        except Exception as e:
+            print("Error creating job listing for learner:")
         
         return Response({
             'message': 'Learner account created successfully',
