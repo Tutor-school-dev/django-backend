@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'tutor',
     'learner',
     'admin_app',
+    'sharing',
 ]
 
 MIDDLEWARE = [
@@ -138,6 +139,7 @@ GOOGLE_CLIENT_ID = config('GOOGLE_CLIENT_ID')
 AWS_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
 AWS_REGION = config('AWS_REGION', default='ap-south-1')
+AWS_S3_BUCKET_NAME = config('AWS_S3_BUCKET_NAME', default='ts-public-data')
 
 # OTP
 OTP_EXPIRY_MINUTES = 10
