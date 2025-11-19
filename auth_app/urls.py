@@ -12,5 +12,5 @@ urlpatterns = [
     path('otp/request/', OTPRequestView.as_view(), name='otp-request'),
     path('otp/verify/', OTPVerifyView.as_view(), name='otp-verify'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token-refresh'),
-    path('tutor/login/', TutorLoginView.as_view(), name='tutor-login'),
+    path('tutor/login/', TutorLoginView.as_view(), name='tutor-login'), # password based login for tutors
 ]
