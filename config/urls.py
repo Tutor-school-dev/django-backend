@@ -23,8 +23,8 @@ urlpatterns = [
     path('health/', HealthCheckView.as_view(), name='health-check'),
     path('admin/', admin.site.urls),
     path('api/auth/', include('auth_app.urls')),
+    path('api/media/', include('sharing.media_urls')),
     path('api/tutor/', include('tutor.urls')),
     path('api/learner/', include('learner.urls')),
     path('api/admin_app/', include('admin_app.urls')),
 ]
-
