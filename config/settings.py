@@ -38,6 +38,7 @@ INSTALLED_APPS = [
     'tutor',
     'learner',
     'admin_app',
+    'subscriptions',
     'sharing',
 ]
 
@@ -144,6 +145,14 @@ AWS_S3_BUCKET_NAME = config('AWS_S3_BUCKET_NAME', default='ts-public-data')
 # OTP
 OTP_EXPIRY_MINUTES = 10
 OTP_LENGTH = 6
+
+# HDFC Payment Gateway
+HDFC_API_KEY = config('HDFC_API_KEY')
+HDFC_PAYMENT_URL = config('HDFC_PAYMENT_URL')
+HDFC_MERCHANT_ID = config('HDFC_MERCHANT_ID')
+HDFC_CLIENT_ID = config('HDFC_CLIENT_ID')
+HDFC_RETURN_URL = config('HDFC_RETURN_URL')
+HDFC_CLIENT_RETURN_URL = config('HDFC_CLIENT_RETURN_URL')
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
