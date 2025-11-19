@@ -7,6 +7,9 @@ from .models import Teacher
 from .serializers import CreateTutorAccountSerializer, TutorSerializer, AddTutorDetailsSerializer
 from auth_app.services import TokenService
 
+from auth_app.authentication import JWTAuthentication
+from django.contrib.gis.geos import Point
+
 
 class CreateTutorAccountView(APIView):
     """Create a new tutor account with access hash verification"""
@@ -93,17 +96,48 @@ class CreateTutorAccountView(APIView):
         }, status=status.HTTP_201_CREATED)
 
 
-class AddTutorDetailsView(APIView):
+class TutorDetailsView(APIView):
     """Protected endpoint to add additional tutor details"""
+
     authentication_classes = []  # Will use custom authentication
     permission_classes = []  # Will handle permissions manually
+
+    def get(self, request):
+        """
+        Get details of the authenticated tutor
+        """        
+        # Authenticate the request
+        auth = JWTAuthentication()
+        auth_result = auth.authenticate(request)
+        
+        if not auth_result:
+            return Response(
+                {'error': 'Authentication credentials were not provided'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        user, token = auth_result
+        
+        # Verify it's a tutor
+        if not hasattr(user, 'user_type') or user.user_type != 'tutor':
+            return Response(
+                {'error': 'This endpoint is only accessible to tutors'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Serialize and return tutor data
+        teacher = user
+        teacher_data = TutorSerializer(teacher).data
+        
+        return Response({
+            'teacher': teacher_data
+        }, status=status.HTTP_200_OK)
+    
     
     def post(self, request):
         """
         Add additional details for an authenticated tutor
         """
-        from auth_app.authentication import JWTAuthentication
-        from django.contrib.gis.geos import Point
         
         # Authenticate the request
         auth = JWTAuthentication()
