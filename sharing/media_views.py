@@ -84,10 +84,10 @@ class MediaUploadView(APIView):
         
         # Update user model with the new media URL
         if media_type == MediaType.PROFILE_PICTURE:
-            user.profile_pic = s3_key
+            user.profile_pic = file_url
             user.save(update_fields=['profile_pic'])
         elif media_type == MediaType.PROFILE_VIDEO:
-            user.video_url = s3_key
+            user.video_url = file_url
             user.save(update_fields=['video_url'])
         
         return Response({

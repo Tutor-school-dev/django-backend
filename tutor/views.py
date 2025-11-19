@@ -201,3 +201,65 @@ class TutorDetailsView(APIView):
             'message': 'Tutor details updated successfully',
             'teacher': teacher_data
         }, status=status.HTTP_200_OK)
+    
+    def put(self, request):
+        """
+        Update tutor details for an authenticated tutor
+        """
+        
+        # Authenticate the request
+        auth = JWTAuthentication()
+        auth_result = auth.authenticate(request)
+        
+        if not auth_result:
+            return Response(
+                {'error': 'Authentication credentials were not provided'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        user, token = auth_result
+        
+        # Verify it's a tutor
+        if not hasattr(user, 'user_type') or user.user_type != 'tutor':
+            return Response(
+                {'error': 'This endpoint is only accessible to tutors'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Get the teacher object
+        teacher = user
+        
+        # Update teacher with partial data (only fields provided)
+        data = request.data
+        
+        simple_fields = [
+            'name', 'email', 'primary_contact', 'secondary_contact',
+            'state', 'area', 'pincode', 'introduction', 'teaching_desc',
+            'lesson_price', 'teaching_mode', 'class_level', 'current_status',
+            'degree', 'university', 'referral'
+        ]
+        
+        # Update simple fields
+        for field in simple_fields:
+            if field in data:
+                setattr(teacher, field, data[field])
+        
+        # Update location if both latitude and longitude provided
+        if 'latitude' in data and 'longitude' in data:
+            teacher.latitude = str(data['latitude'])
+            teacher.longitude = str(data['longitude'])
+            teacher.location = Point(
+                float(data['longitude']),
+                float(data['latitude']),
+                srid=4326
+            )
+        
+        teacher.save()
+        
+        # Serialize and return complete teacher data
+        teacher_data = TutorSerializer(teacher).data
+        
+        return Response({
+            'message': 'Tutor details updated successfully',
+            'teacher': teacher_data
+        }, status=status.HTTP_200_OK)

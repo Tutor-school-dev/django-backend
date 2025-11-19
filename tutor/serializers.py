@@ -85,7 +85,7 @@ class TutorSerializer(serializers.ModelSerializer):
             'teaching_mode', 'subscription_validity',
             'basic_done', 'location_done', 'later_onboarding_done',
             'class_level', 'current_status', 'degree', 'university', 'referral',
-            'created_at', 'subjects'
+            'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at']
 

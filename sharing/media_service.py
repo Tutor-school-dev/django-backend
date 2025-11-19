@@ -130,8 +130,8 @@ class S3MediaService:
             if content_type:
                 upload_args['ContentType'] = content_type
             
-            # Add ACL for public read (since bucket is public)
-            upload_args['ACL'] = 'public-read'
+            # Note: ACL removed - bucket is configured as public via bucket policy
+            # If ACLs are needed, they must be enabled at bucket level first
             
             # Upload to S3
             self.s3_client.put_object(**upload_args)
