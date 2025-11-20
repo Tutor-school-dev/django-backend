@@ -33,6 +33,12 @@ class OTPVerifySerializer(serializers.Serializer):
     # Optional fields for new user registration
     name = serializers.CharField(required=False, max_length=255)
     email = serializers.EmailField(required=False)
+    
+    def validate_email(self, value):
+        """Normalize email to lowercase"""
+        if value:
+            return value.lower().strip()
+        return value
 
 
 class TutorSerializer(serializers.ModelSerializer):

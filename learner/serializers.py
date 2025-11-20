@@ -40,7 +40,8 @@ class CreateLearnerAccountSerializer(serializers.Serializer):
             raise serializers.ValidationError("Parent name should contain only letters and spaces")
         
         # Validate parentEmail
-        parent_email = value.get('parentEmail', '').strip()
+        parent_email = value.get('parentEmail', '').strip().lower()
+        value['parentEmail'] = parent_email
         if not parent_email:
             raise serializers.ValidationError("Parent email is required")
         email_regex = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'

@@ -68,6 +68,12 @@ class Teacher(models.Model):
     def __str__(self):
         return f"{self.name} ({self.email})"
     
+    def save(self, *args, **kwargs):
+        """Override save to ensure email is lowercase"""
+        if self.email:
+            self.email = self.email.lower().strip()
+        super().save(*args, **kwargs)
+    
     def set_password(self, raw_password):
         """Hash and set password"""
         from django.contrib.auth.hashers import make_password

@@ -54,7 +54,7 @@ class GoogleSignInView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
-        email = user_info['email']
+        email = user_info['email'].lower().strip()
         name = user_info['name']
         
         logger.info(f"Google authentication successful for email: {email}, user_type: {user_type}")
@@ -294,7 +294,7 @@ class TutorLoginView(APIView):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
-        email = serializer.validated_data['email']
+        email = serializer.validated_data['email'].lower().strip()
         password = serializer.validated_data['password']
         
         # Find tutor by email

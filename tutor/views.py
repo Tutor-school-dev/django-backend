@@ -73,7 +73,7 @@ class CreateTutorAccountView(APIView):
         
         # Update teacher record with complete information
         teacher.name = serializer.validated_data['name']
-        teacher.email = serializer.validated_data['email']
+        teacher.email = serializer.validated_data['email']  # Already normalized in serializer
         teacher.primary_contact = serializer.validated_data['p_contact']
         
         # Set password using the model's method (hashes password)

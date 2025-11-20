@@ -88,7 +88,7 @@ class CreateLearnerAccountView(APIView):
         learner.name = data['studentName'].strip()
         learner.board = data['studentBoard'].strip()
         learner.guardian_name = data['parentName'].strip()
-        learner.guardian_email = data['parentEmail'].strip()
+        learner.guardian_email = data['parentEmail'].strip().lower()
         learner.grade = data['grade'].strip()
         learner.budget = float(data['budget'])
         learner.preferred_mode = data['preferredMode']

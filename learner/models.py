@@ -57,6 +57,14 @@ class Learner(models.Model):
     def __str__(self):
         return f"{self.name} ({self.primary_contact})"
     
+    def save(self, *args, **kwargs):
+        """Override save to ensure emails are lowercase"""
+        if self.email:
+            self.email = self.email.lower().strip()
+        if self.guardian_email:
+            self.guardian_email = self.guardian_email.lower().strip()
+        super().save(*args, **kwargs)
+    
     def set_password(self, raw_password):
         """Hash and set password"""
         from django.contrib.auth.hashers import make_password

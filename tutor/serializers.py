@@ -61,6 +61,9 @@ class CreateTutorAccountSerializer(serializers.Serializer):
         """Cross-field validation"""
         # Check if email already exists for a different user
         email = data.get('email')
+        if email:
+            email = email.lower().strip()
+            data['email'] = email
         if Teacher.objects.filter(email=email).exclude(password='').exists():
             raise serializers.ValidationError({
                 'email': 'A tutor account with this email already exists'
