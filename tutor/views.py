@@ -3,8 +3,10 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 
+from admin_app.models import JobApplication
+
 from .models import Teacher
-from .serializers import CreateTutorAccountSerializer, TutorSerializer, AddTutorDetailsSerializer
+from .serializers import CreateTutorAccountSerializer, JobApplicationSerializer, TutorSerializer, AddTutorDetailsSerializer
 from auth_app.services import TokenService
 
 from auth_app.authentication import JWTAuthentication
@@ -262,4 +264,40 @@ class TutorDetailsView(APIView):
         return Response({
             'message': 'Tutor details updated successfully',
             'teacher': teacher_data
+        }, status=status.HTTP_200_OK)
+
+
+class TutorJobDetails(APIView):
+
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+
+        # Authenticate the request
+        auth = JWTAuthentication()
+        auth_result = auth.authenticate(request)
+
+        if not auth_result:
+            return Response(
+                {'error': 'Authentication credentials were not provided'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        user, token = auth_result
+        
+        # Verify it's a tutor
+        if not hasattr(user, 'user_type') or user.user_type != 'tutor':
+            return Response(
+                {'error': 'This endpoint is only accessible to tutors'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Serialize and return tutor data
+        teacher = user
+        applications = JobApplication.objects.filter(tutor=teacher).order_by('applied_at')
+        applications_data = JobApplicationSerializer(applications, many=True).data
+        
+        return Response({
+            'applications': applications_data 
         }, status=status.HTTP_200_OK)

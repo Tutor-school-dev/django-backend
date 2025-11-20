@@ -116,7 +116,7 @@ class StartPaymentView(APIView):
                 teacher_id=str(teacher.id),
                 teacher_name=teacher.name or '',
                 teacher_email=teacher.email or '',
-                teacher_phone=teacher.phone or '',
+                teacher_phone=teacher.primary_contact or '',
                 subscription_id=sub_id,
                 duration_months=duration
             )

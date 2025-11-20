@@ -42,6 +42,7 @@ class Teacher(models.Model):
     university = models.CharField(max_length=255, null=True, blank=True)
     class_level = models.CharField(max_length=255, null=True, blank=True)
     degree = models.CharField(max_length=255, null=True, blank=True)
+    subjects = models.TextField(null=True, blank=True)  # JSON string or comma-separated
     
     # Subscription & security
     subscription_validity = models.DateTimeField(null=True, blank=True)

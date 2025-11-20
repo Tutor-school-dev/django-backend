@@ -42,4 +42,4 @@ class JobApplication(models.Model):
         ordering = ['-applied_at']
 
     def __str__(self):
-        return f"Application by {self.tutor_name} for {self.job_listing}"
+        return f"Application by {self.tutor.name} for {self.job_listing}"

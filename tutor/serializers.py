@@ -1,4 +1,7 @@
 from rest_framework import serializers
+
+from admin_app.models import JobApplication
+from learner.serializers import LearnerSerializer
 from .models import Teacher
 import re
 
@@ -90,6 +93,26 @@ class TutorSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at']
 
 
+class JobApplicationSerializer(serializers.ModelSerializer):
+    learner = serializers.SerializerMethodField()
+
+    class Meta:
+        model = JobApplication
+        # include all JobApplication fields
+        fields = [
+            'id',
+            'tutor',
+            'applied_at',
+            'status',
+            'learner',
+        ]
+
+    def get_learner(self, obj):
+        """Return learner details through job_listing → learner"""
+        learner = obj.job_listing.learner
+        return LearnerSerializer(learner).data
+    
+
 class AddTutorDetailsSerializer(serializers.Serializer):
     """Serializer for adding additional tutor details"""
     
@@ -161,3 +184,5 @@ class AddTutorDetailsSerializer(serializers.Serializer):
         if not value.strip():
             raise serializers.ValidationError("University cannot be empty")
         return value.strip()
+
+
