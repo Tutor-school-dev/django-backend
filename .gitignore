@@ -1,2 +1,36 @@
 .env
 .env.example
+
+# Logs
+logs/*.log
+logs/**/*.log
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Django
+*.sqlite3
+db.sqlite3
+staticfiles/
+mediafiles/
+ca-cert.crt
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+.github/

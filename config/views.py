@@ -4,6 +4,9 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny
 from django.db import connection
 from django.utils import timezone
+from .logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class HealthCheckView(APIView):
@@ -17,6 +20,8 @@ class HealthCheckView(APIView):
         - API is responding
         - Database connectivity
         """
+        logger.debug("Health check requested")
+        
         health_status = {
             'status': 'healthy',
             'timestamp': timezone.now().isoformat(),
@@ -29,9 +34,11 @@ class HealthCheckView(APIView):
             with connection.cursor() as cursor:
                 cursor.execute("SELECT 1")
             health_status['checks']['database'] = 'connected'
+            logger.debug("Health check passed - database connected")
         except Exception as e:
             health_status['status'] = 'unhealthy'
             health_status['checks']['database'] = f'error: {str(e)}'
+            logger.error(f"Health check failed - database error: {str(e)}", exc_info=True)
             return Response(health_status, status=status.HTTP_503_SERVICE_UNAVAILABLE)
         
         return Response(health_status, status=status.HTTP_200_OK)

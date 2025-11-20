@@ -180,4 +180,94 @@ HDFC_CLIENT_RETURN_URL = config('HDFC_CLIENT_RETURN_URL')
 
 # CORS
 CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True  
+CORS_ALLOW_CREDENTIALS = True
+
+# Logging Configuration
+LOGS_DIR = BASE_DIR / 'logs'
+LOGS_DIR.mkdir(exist_ok=True)  # Create logs directory if it doesn't exist
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'detailed': {
+            'format': '{asctime} - {levelname} - {name} - {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+        'simple': {
+            'format': '{asctime} - {levelname} - {message}',
+            'style': '{',
+            'datefmt': '%Y-%m-%d %H:%M:%S',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / 'application-logs.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'detailed',
+        },
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+        'error_file': {
+            'level': 'ERROR',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': str(LOGS_DIR / 'error-logs.log'),
+            'maxBytes': 1024 * 1024 * 10,  # 10 MB
+            'backupCount': 5,
+            'formatter': 'detailed',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'console', 'error_file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['file', 'error_file'],
+            'level': 'WARNING',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': ['file'],
+            'level': 'WARNING' if not DEBUG else 'DEBUG',
+            'propagate': False,
+        },
+        'auth_app': {
+            'handlers': ['file', 'console', 'error_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'tutor': {
+            'handlers': ['file', 'console', 'error_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'learner': {
+            'handlers': ['file', 'console', 'error_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'subscriptions': {
+            'handlers': ['file', 'console', 'error_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'sharing': {
+            'handlers': ['file', 'console', 'error_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+    'root': {
+        'handlers': ['file', 'console', 'error_file'],
+        'level': 'INFO',
+    },
+}  

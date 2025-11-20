@@ -3,6 +3,9 @@ from google.oauth2 import id_token
 from google.auth.transport import requests
 from django.conf import settings
 from rest_framework_simplejwt.tokens import RefreshToken
+from config.logger import get_logger
+
+logger = get_logger(__name__)
 
 
 class GoogleAuthService:
@@ -20,6 +23,7 @@ class GoogleAuthService:
             dict: User info (email, name, picture) or None if invalid
         """
         try:
+            logger.debug("Attempting to verify Google ID token")
             idinfo = id_token.verify_oauth2_token(
                 token, 
                 requests.Request(), 
@@ -28,16 +32,21 @@ class GoogleAuthService:
             
             # Verify the token is for our app
             if idinfo['aud'] != settings.GOOGLE_CLIENT_ID:
+                logger.warning(f"Token audience mismatch. Expected: {settings.GOOGLE_CLIENT_ID}")
                 return None
             
+            email = idinfo.get('email')
+            logger.info(f"Google token verified successfully for email: {email}")
+            
             return {
-                'email': idinfo.get('email'),
+                'email': email,
                 'name': idinfo.get('name'),
                 'picture': idinfo.get('picture'),
                 'email_verified': idinfo.get('email_verified', False),
             }
-        except ValueError:
+        except ValueError as e:
             # Invalid token
+            logger.error(f"Failed to verify Google token: {str(e)}")
             return None
 
 
@@ -64,6 +73,7 @@ class OTPService:
             bool: True if sent successfully, False otherwise
         """
         try:
+            logger.info(f"Attempting to send OTP SMS to {phone_number}")
             message = f"Your TutorSchool verification code is: {otp_code}. Valid for {settings.OTP_EXPIRY_MINUTES} minutes."
             
             # response = self.sns_client.publish(
@@ -80,9 +90,10 @@ class OTPService:
             #         }
             #     }
             # )
+            logger.info(f"OTP SMS sent successfully to {phone_number}")
             return True
         except Exception as e:
-            print(f"Error sending SMS: {str(e)}")
+            logger.error(f"Error sending SMS to {phone_number}: {str(e)}", exc_info=True)
             return False
     
     def format_phone_number(self, phone_number):
