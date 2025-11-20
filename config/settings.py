@@ -18,8 +18,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
-ALLOWED_HOSTS = ["*", "stagingapi.tutorschool.in"]
+ALLOWED_HOSTS = ["stagingapi.tutorschool.in", "localhost", "127.0.0.1"]
+
+# Security Configuration
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Force HTTPS in production
+if not DEBUG:
+    SECURE_SSL_REDIRECT = False  # nginx handles this
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+
+# Admin URL configuration
+LOGIN_URL = '/admin/login/'
+LOGIN_REDIRECT_URL = '/admin/'
+LOGOUT_REDIRECT_URL = '/admin/'
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -29,11 +42,9 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.gis',
-    
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
-    
     'auth_app',
     'tutor',
     'learner',
@@ -73,28 +84,35 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# Database
-CA_CERT_CONTENT = config('DB_SSL_CA')
-CA_CERT_PATH = BASE_DIR / 'ca-cert.crt'
+# Database Configuration
+ENVIRONMENT = config('ENVIRONMENT', default='staging')
 
-# Write CA certificate if it doesn't exist
-if not CA_CERT_PATH.exists():
-    CA_CERT_PATH.write_text(CA_CERT_CONTENT)
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.contrib.gis.db.backends.postgis',
-        'NAME': config('DB_NAME'),
-        'USER': config('DB_USER'),
-        'PASSWORD': config('DB_PASSWORD'),
-        'HOST': config('DB_HOST'),
-        'PORT': config('DB_PORT'),
-        'OPTIONS': {
-            'sslmode': 'require',
-            'sslrootcert': str(CA_CERT_PATH),
-        },
+if ENVIRONMENT == 'staging':
+    # PostgreSQL with PostGIS (staging)
+    CA_CERT_PATH = BASE_DIR / 'ca-cert.crt'
+    
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.contrib.gis.db.backends.postgis',
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST'),
+            'PORT': config('DB_PORT'),
+            'OPTIONS': {
+                'sslmode': 'require',
+                'sslrootcert': str(CA_CERT_PATH),
+            },
+        }
     }
-}
+else:
+    # SQLite with SpatiaLite (dev)
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.contrib.gis.db.backends.spatialite',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},
@@ -110,17 +128,23 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'mediafiles'
+
+# WhiteNoise Configuration (backup for static files)
+WHITENOISE_USE_FINDERS = True
+WHITENOISE_AUTOREFRESH = DEBUG
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # REST Framework
+# NOTE: No default authentication/permission classes here
+# Each API view explicitly sets its authentication via decorators or view attributes
+# This allows Django admin to use session authentication while APIs use JWT
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-    ),
-    'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated',
-    ),
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
 }
 
 # JWT

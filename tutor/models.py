@@ -78,6 +78,16 @@ class Teacher(models.Model):
         from django.contrib.auth.hashers import check_password
         return check_password(raw_password, self.password)
     
+    @property
+    def is_authenticated(self):
+        """Always return True for authenticated users"""
+        return True
+    
+    @property
+    def is_anonymous(self):
+        """Always return False for authenticated users"""
+        return False
+    
     def has_active_subscription(self):
         """Check if subscription is active"""
         if not self.subscription_validity:

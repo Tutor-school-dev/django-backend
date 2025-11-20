@@ -67,3 +67,13 @@ class Learner(models.Model):
         """Check if password is correct"""
         from django.contrib.auth.hashers import check_password
         return check_password(raw_password, self.password)
+    
+    @property
+    def is_authenticated(self):
+        """Always return True for authenticated users"""
+        return True
+    
+    @property
+    def is_anonymous(self):
+        """Always return False for authenticated users"""
+        return False
