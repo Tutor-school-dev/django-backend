@@ -225,21 +225,7 @@ LOGGING = {
         },
     },
     'loggers': {
-        'django': {
-            'handlers': ['file', 'console', 'error_file'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'django.request': {
-            'handlers': ['file', 'error_file'],
-            'level': 'WARNING',
-            'propagate': False,
-        },
-        'django.db.backends': {
-            'handlers': ['file'],
-            'level': 'WARNING' if not DEBUG else 'DEBUG',
-            'propagate': False,
-        },
+        # Your application loggers only
         'auth_app': {
             'handlers': ['file', 'console', 'error_file'],
             'level': 'DEBUG',
@@ -265,9 +251,36 @@ LOGGING = {
             'level': 'DEBUG',
             'propagate': False,
         },
-    },
-    'root': {
-        'handlers': ['file', 'console', 'error_file'],
-        'level': 'INFO',
+        'admin_app': {
+            'handlers': ['file', 'console', 'error_file'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        # Silence Django's internal loggers - only log critical errors
+        'django': {
+            'handlers': ['error_file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.request': {
+            'handlers': ['error_file'],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.db.backends': {
+            'handlers': [],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.server': {
+            'handlers': [],
+            'level': 'ERROR',
+            'propagate': False,
+        },
+        'django.template': {
+            'handlers': [],
+            'level': 'ERROR',
+            'propagate': False,
+        },
     },
 }  
