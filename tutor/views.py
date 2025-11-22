@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from django.db.models import Q
 
 from admin_app.models import JobApplication
 
@@ -12,6 +13,77 @@ from auth_app.services import TokenService
 from auth_app.authentication import JWTAuthentication
 from django.contrib.gis.geos import Point
 
+
+class TutorGenericDetailsView(APIView):
+    """Public endpoint to get all tutors' basic details"""
+    authentication_classes = []  # Will use custom authentication
+    permission_classes = []  # Will handle permissions manually
+
+    def get(self, request):
+        """
+        Get details of the all tutors
+        """        
+        auth = JWTAuthentication()
+        auth_result = auth.authenticate(request)
+        
+        if not auth_result:
+            return Response(
+                {'error': 'Authentication credentials were not provided'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        learner, token = auth_result
+
+        subjects_param = request.query_params.get('subjects', '') 
+        mode_of_teaching = request.query_params.get('mode_of_teaching', 'BOTH')
+
+        if mode_of_teaching == 'ONLINE':
+            tutors = Teacher.objects.filter(
+                basic_done=True,
+                location_done=True,
+                teaching_mode__in=['ONLINE', 'BOTH']
+            )
+        elif mode_of_teaching == 'OFFLINE':
+            latitude = learner.latitude
+            longitude = learner.longitude
+            if not latitude or not longitude:
+                return Response(
+                    {'error': 'Please set your location first in the profile section'},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            # Convert string coordinates to float for Point creation
+            user_location = Point(float(longitude), float(latitude), srid=4326)
+            tutors = Teacher.objects.filter(
+                basic_done=True,
+                location_done=True,
+                teaching_mode__in=['OFFLINE', 'BOTH'],
+                location__distance_lte=(user_location, 30000)  # 30 km radius
+            )
+        else:
+            tutors = Teacher.objects.filter(
+                basic_done=True,
+                location_done=True
+            )
+
+        # Parse subjects from comma-separated string
+        subjects = []
+        if subjects_param:
+            subjects = [s.strip() for s in subjects_param.split(',') if s.strip()]
+            
+        if subjects:
+            subject_queries = Q()
+            for subject in subjects:
+                # Search for subject in JSON string (e.g., ["Maths", "Science"])
+                subject_queries |= Q(subjects__icontains=f'"{subject}"')
+            
+            tutors = tutors.filter(subject_queries)
+
+        tutors_data = TutorSerializer(tutors, many=True).data
+        
+        return Response({
+            'tutors': tutors_data
+        }, status=status.HTTP_200_OK)
+    
 
 class CreateTutorAccountView(APIView):
     """Create a new tutor account with access hash verification"""
@@ -238,7 +310,7 @@ class TutorDetailsView(APIView):
             'name', 'email', 'primary_contact', 'secondary_contact',
             'state', 'area', 'pincode', 'introduction', 'teaching_desc',
             'lesson_price', 'teaching_mode', 'class_level', 'current_status',
-            'degree', 'university', 'referral'
+            'degree', 'university', 'referral', 'subjects'
         ]
         
         # Update simple fields

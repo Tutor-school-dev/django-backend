@@ -5,7 +5,7 @@ from django.contrib.gis.admin import GISModelAdmin
 
 @admin.register(Teacher)
 class TeacherAdmin(GISModelAdmin):
-    list_display = ['name', 'email', 'primary_contact', 'teaching_mode', 'state', 'created_at']
+    list_display = ['name', 'email', 'primary_contact', 'teaching_mode', 'state', 'created_at', 'subjects']
     list_filter = ['teaching_mode', 'state', 'basic_done', 'location_done', 'later_onboarding_done', 'created_at']
     search_fields = ['name', 'email', 'primary_contact', 'secondary_contact', 'area', 'pincode']
     readonly_fields = ['id', 'created_at', 'updated_at', 'password_last_modified']

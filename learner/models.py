@@ -17,7 +17,7 @@ class Learner(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     zoho_id = models.CharField(max_length=255, null=True, blank=True)
     name = models.CharField(max_length=255)
-    primary_contact = models.CharField(max_length=20, unique=True)
+    primary_contact = models.CharField(max_length=20, unique=True, null=True, blank=True)
     secondary_contact = models.CharField(max_length=20, null=True, blank=True)
     email = models.EmailField(unique=True, null=True, blank=True)
     password = models.CharField(max_length=255)

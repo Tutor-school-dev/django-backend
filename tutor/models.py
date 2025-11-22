@@ -17,7 +17,7 @@ class Teacher(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     zoho_id = models.CharField(max_length=255, null=True, blank=True)
     name = models.CharField(max_length=255)
-    primary_contact = models.CharField(max_length=20, unique=True)
+    primary_contact = models.CharField(max_length=20, unique=True, null=True, blank=True)
     secondary_contact = models.CharField(max_length=20, null=True, blank=True)
     email = models.EmailField(unique=True, null=True, blank=True)
     password = models.CharField(max_length=255)
@@ -42,7 +42,7 @@ class Teacher(models.Model):
     university = models.CharField(max_length=255, null=True, blank=True)
     class_level = models.CharField(max_length=255, null=True, blank=True)
     degree = models.CharField(max_length=255, null=True, blank=True)
-    subjects = models.TextField(null=True, blank=True)  # JSON string or comma-separated
+    subjects = models.TextField(null=True, blank=True, default='')  # JSON string or comma-separated
     
     # Subscription & security
     subscription_validity = models.DateTimeField(null=True, blank=True)
