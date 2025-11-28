@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import Learner
+from config.constants import CLASS_LEVEL_CHOICES, PREFERRED_MODE_CHOICES
 import re
 import json
 
@@ -8,6 +9,7 @@ class CreateLearnerAccountSerializer(serializers.Serializer):
     """Serializer for creating a learner account with validation"""
     
     PREFERRED_MODES = ['Online', 'Offline', 'Both']
+    VALID_CLASS_LEVELS = [choice[0] for choice in CLASS_LEVEL_CHOICES]
     
     access_hash = serializers.CharField(required=True, max_length=500)
     data = serializers.DictField(required=True)
@@ -52,10 +54,16 @@ class CreateLearnerAccountSerializer(serializers.Serializer):
         if not value.get('studentBoard', '').strip():
             raise serializers.ValidationError("Student board is required")
         
-        # Validate grade
+        # Validate grade against class level choices
         grade = value.get('grade', '').strip()
         if not grade:
-            raise serializers.ValidationError("Grade is required")
+            raise serializers.ValidationError("Grade/Class level is required")
+        
+        # Validate against predefined class levels
+        if grade not in self.VALID_CLASS_LEVELS:
+            raise serializers.ValidationError(
+                "Invalid grade/class level. Must be one of the predefined class levels."
+            )
         
         # Validate subjects (should be a list)
         subjects = value.get('subjects')
@@ -120,3 +128,11 @@ class LearnerSerializer(serializers.ModelSerializer):
             'created_at'
         ]
         read_only_fields = ['id', 'created_at']
+    
+    def validate_grade(self, value):
+        """Validate grade against allowed class level choices"""
+        if value and value not in [choice[0] for choice in CLASS_LEVEL_CHOICES]:
+            raise serializers.ValidationError(
+                "Invalid grade/class level. Must be one of the predefined class levels."
+            )
+        return value

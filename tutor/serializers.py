@@ -3,6 +3,7 @@ from rest_framework import serializers
 from admin_app.models import JobApplication
 from learner.serializers import LearnerSerializer
 from .models import Teacher
+from config.constants import CLASS_LEVEL_CHOICES, TEACHING_MODE_CHOICES
 import re
 
 
@@ -94,6 +95,14 @@ class TutorSerializer(serializers.ModelSerializer):
             'created_at', 'updated_at', 'subjects'
         ]
         read_only_fields = ['id', 'created_at']
+    
+    def validate_class_level(self, value):
+        """Validate class_level against allowed choices"""
+        if value and value not in [choice[0] for choice in CLASS_LEVEL_CHOICES]:
+            raise serializers.ValidationError(
+                "Invalid class level. Must be one of the predefined class levels."
+            )
+        return value
 
 
 class JobApplicationSerializer(serializers.ModelSerializer):
@@ -120,12 +129,14 @@ class AddTutorDetailsSerializer(serializers.Serializer):
     """Serializer for adding additional tutor details"""
     
     TEACHING_MODES = ['ONLINE', 'OFFLINE', 'BOTH']
+    VALID_CLASS_LEVELS = [choice[0] for choice in CLASS_LEVEL_CHOICES]
     
     # Academic details
-    class_field = serializers.CharField(
-        required=True, 
-        max_length=50,
-        source='class'  # Maps to 'class' field in request but uses different name to avoid Python keyword
+    class_field = serializers.ChoiceField(
+        required=True,
+        choices=CLASS_LEVEL_CHOICES,
+        source='class',  # Maps to 'class' field in request but uses different name to avoid Python keyword
+        error_messages={'invalid_choice': 'Invalid class level selection'}
     )
     current_status = serializers.CharField(required=True, max_length=255)
     degree = serializers.CharField(required=True, max_length=255)
@@ -165,9 +176,16 @@ class AddTutorDetailsSerializer(serializers.Serializer):
         return value
     
     def validate_class_field(self, value):
-        """Validate class field"""
-        if not value.strip():
-            raise serializers.ValidationError("Class cannot be empty")
+        """Validate class field against allowed class levels"""
+        if not value or not value.strip():
+            raise serializers.ValidationError("Class level cannot be empty")
+        
+        # ChoiceField already validates against CLASS_LEVEL_CHOICES
+        # This additional validation ensures consistency
+        if value not in self.VALID_CLASS_LEVELS:
+            raise serializers.ValidationError(
+                f"Invalid class level. Must be one of the predefined class levels."
+            )
         return value.strip()
     
     def validate_current_status(self, value):

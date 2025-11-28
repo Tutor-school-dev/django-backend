@@ -2,16 +2,13 @@ import uuid
 from django.db import models
 from django.contrib.gis.db.models import PointField
 from django.utils import timezone
+from config.constants import CLASS_LEVEL_CHOICES, TEACHING_MODE_CHOICES
 
 
 class Teacher(models.Model):
     """Teacher/Tutor model"""
     
-    TEACHING_MODES = (
-        ('ONLINE', 'Online'),
-        ('OFFLINE', 'Offline'),
-        ('BOTH', 'Both'),
-    )
+    TEACHING_MODES = TEACHING_MODE_CHOICES
     
     # Primary fields
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -24,6 +21,7 @@ class Teacher(models.Model):
     
     # Location fields
     state = models.CharField(max_length=255, null=True, blank=True)
+    city = models.CharField(max_length=255, null=True, blank=True)
     area = models.CharField(max_length=255, null=True, blank=True)
     pincode = models.CharField(max_length=10, null=True, blank=True)
     location = PointField(geography=True, null=True, blank=True)
@@ -40,7 +38,7 @@ class Teacher(models.Model):
     teaching_mode = models.CharField(max_length=10, choices=TEACHING_MODES, default='BOTH')
     referral = models.CharField(max_length=255, null=True, blank=True)
     university = models.CharField(max_length=255, null=True, blank=True)
-    class_level = models.CharField(max_length=255, null=True, blank=True)
+    class_level = models.CharField(max_length=255, choices=CLASS_LEVEL_CHOICES, null=True, blank=True)
     degree = models.CharField(max_length=255, null=True, blank=True)
     subjects = models.TextField(null=True, blank=True, default='')  # JSON string or comma-separated
     

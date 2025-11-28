@@ -36,6 +36,9 @@ class TutorGenericDetailsView(APIView):
 
         subjects_param = request.query_params.get('subjects', '') 
         mode_of_teaching = request.query_params.get('mode_of_teaching', 'BOTH')
+        city = request.query_params.get('city', '')
+        area = request.query_params.get('area', '')
+        class_level = request.query_params.get('class_level', '')
 
         if mode_of_teaching == 'ONLINE':
             tutors = Teacher.objects.filter(
@@ -64,6 +67,15 @@ class TutorGenericDetailsView(APIView):
                 basic_done=True,
                 location_done=True
             )
+            
+        if city:
+            tutors = tutors.filter(city__iexact=city)
+
+        if area:
+            tutors = tutors.filter(area__iexact=area)
+
+        if class_level:
+            tutors = tutors.filter(class_level__iexact=class_level)
 
         # Parse subjects from comma-separated string
         subjects = []

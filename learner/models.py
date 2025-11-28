@@ -2,16 +2,13 @@ import uuid
 from django.db import models
 from django.contrib.gis.db.models import PointField
 from django.utils import timezone
+from config.constants import CLASS_LEVEL_CHOICES, PREFERRED_MODE_CHOICES
 
 
 class Learner(models.Model):
     """Learner/Learner model"""
     
-    PREFERRED_MODES = (
-        ('Online', 'Online'),
-        ('Offline', 'Offline'),
-        ('Both', 'Both'),
-    )
+    PREFERRED_MODES = PREFERRED_MODE_CHOICES
     
     # Primary fields
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -31,7 +28,7 @@ class Learner(models.Model):
     longitude = models.CharField(max_length=50, null=True, blank=True)
     
     # Learner-specific fields
-    grade = models.CharField(max_length=50, null=True, blank=True)
+    grade = models.CharField(max_length=255, choices=CLASS_LEVEL_CHOICES, null=True, blank=True)
     board = models.CharField(max_length=100, null=True, blank=True)
     guardian_name = models.CharField(max_length=255, null=True, blank=True)
     guardian_email = models.EmailField(null=True, blank=True)
