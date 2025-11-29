@@ -153,6 +153,7 @@ class AddTutorDetailsSerializer(serializers.Serializer):
     # Location details
     area = serializers.CharField(required=True, max_length=255)
     state = serializers.CharField(required=True, max_length=255)
+    city = serializers.CharField(required=True, max_length=255)
     pincode = serializers.CharField(required=True, max_length=10)
     latitude = serializers.DecimalField(
         required=True,

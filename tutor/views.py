@@ -267,6 +267,7 @@ class TutorDetailsView(APIView):
         teacher.pincode = validated_data['pincode']
         teacher.latitude = str(validated_data['latitude'])
         teacher.longitude = str(validated_data['longitude'])
+        teacher.city = validated_data['city']
         
         # Create PostGIS Point for location
         teacher.location = Point(
