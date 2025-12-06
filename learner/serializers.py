@@ -136,3 +136,119 @@ class LearnerSerializer(serializers.ModelSerializer):
                 "Invalid grade/class level. Must be one of the predefined class levels."
             )
         return value
+
+
+class CognitiveAssessmentInputSerializer(serializers.Serializer):
+    """Serializer for cognitive assessment input from frontend"""
+    
+    # Screen 2 - Conservation
+    s2 = serializers.DictField(required=True)
+    
+    # Screen 3 - Classification 
+    s3 = serializers.DictField(required=True)
+    
+    # Screen 4 - Seriation
+    s4 = serializers.DictField(required=True)
+    
+    # Screen 5 - Reversibility
+    s5 = serializers.DictField(required=True)
+    
+    # Screen 6 - Hypothetical Thinking
+    s6 = serializers.DictField(required=True)
+    
+    def validate_s2(self, value):
+        """Validate screen 2 data"""
+        if 'choice' not in value:
+            raise serializers.ValidationError("Missing 'choice' field in s2")
+        
+        choice = value['choice']
+        if choice not in ['A', 'B', 'C']:
+            raise serializers.ValidationError("s2.choice must be 'A', 'B', or 'C'")
+        
+        # Confidence is optional but should be a number if present
+        if 'confidence' in value and value['confidence'] is not None:
+            try:
+                confidence = int(value['confidence'])
+                if confidence < 0 or confidence > 100:
+                    raise serializers.ValidationError("s2.confidence must be between 0 and 100")
+            except (ValueError, TypeError):
+                raise serializers.ValidationError("s2.confidence must be a number")
+        
+        return value
+    
+    def validate_s3(self, value):
+        """Validate screen 3 data"""
+        if 'rule' not in value:
+            raise serializers.ValidationError("Missing 'rule' field in s3")
+        
+        rule = value['rule']
+        if rule not in ['shape', 'color', 'mixed']:
+            raise serializers.ValidationError("s3.rule must be 'shape', 'color', or 'mixed'")
+        
+        if 'corrections' not in value:
+            raise serializers.ValidationError("Missing 'corrections' field in s3")
+        
+        try:
+            corrections = int(value['corrections'])
+            if corrections < 0:
+                raise serializers.ValidationError("s3.corrections must be non-negative")
+        except (ValueError, TypeError):
+            raise serializers.ValidationError("s3.corrections must be a number")
+        
+        return value
+    
+    def validate_s4(self, value):
+        """Validate screen 4 data"""
+        if 'is_correct' not in value:
+            raise serializers.ValidationError("Missing 'is_correct' field in s4")
+        
+        if not isinstance(value['is_correct'], bool):
+            raise serializers.ValidationError("s4.is_correct must be boolean")
+        
+        if 'swap_count' not in value:
+            raise serializers.ValidationError("Missing 'swap_count' field in s4")
+        
+        try:
+            swap_count = int(value['swap_count'])
+            if swap_count < 0:
+                raise serializers.ValidationError("s4.swap_count must be non-negative")
+        except (ValueError, TypeError):
+            raise serializers.ValidationError("s4.swap_count must be a number")
+        
+        return value
+    
+    def validate_s5(self, value):
+        """Validate screen 5 data"""
+        if 'answer' not in value:
+            raise serializers.ValidationError("Missing 'answer' field in s5")
+        
+        answer = value['answer']
+        if answer not in ['yes', 'no', 'not_sure']:
+            raise serializers.ValidationError("s5.answer must be 'yes', 'no', or 'not_sure'")
+        
+        # Explanation is optional
+        return value
+    
+    def validate_s6(self, value):
+        """Validate screen 6 data"""
+        if 'choice' not in value:
+            raise serializers.ValidationError("Missing 'choice' field in s6")
+        
+        choice = value['choice']
+        if choice not in ['A', 'B', 'C', 'D']:
+            raise serializers.ValidationError("s6.choice must be 'A', 'B', 'C', or 'D'")
+        
+        return value
+
+
+class CognitiveAssessmentOutputSerializer(serializers.Serializer):
+    """Serializer for cognitive assessment output/results"""
+    
+    conservation_score = serializers.IntegerField()
+    classification_score = serializers.IntegerField()
+    seriation_score = serializers.IntegerField()
+    reversibility_score = serializers.IntegerField()
+    hypothetical_thinking_score = serializers.IntegerField()
+    piaget_construct_score = serializers.IntegerField()
+    piaget_stage = serializers.CharField()
+    summary_points = serializers.ListField(child=serializers.CharField())
