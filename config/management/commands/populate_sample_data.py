@@ -317,8 +317,8 @@ class Command(BaseCommand):
                 subjects = random.choice(SUBJECTS)
                 subjects_str = str(subjects)
                 
-                # Random grade
-                grade = random.choice(school_levels)
+                # Random educationLevel
+                educationLevel = random.choice(school_levels)
                 
                 # Create learner
                 learner = Learner.objects.create(
@@ -337,7 +337,7 @@ class Command(BaseCommand):
                     longitude=str(lng),
                     
                     # Learner specific
-                    grade=grade,
+                    educationLevel=educationLevel,
                     board=random.choice(BOARDS),
                     guardian_name=f"{parent_first} {parent_last}",
                     guardian_email=parent_email,

@@ -6,7 +6,7 @@ class JobListingSerializer(serializers.ModelSerializer):
     learner_name = serializers.CharField(source='learner.name', read_only=True)
     learner_phone = serializers.CharField(source='learner.primary_contact', read_only=True)
     learner_email = serializers.EmailField(source='learner.email', read_only=True)
-    grade = serializers.CharField(source='learner.grade', read_only=True)
+    educationLevel = serializers.CharField(source='learner.educationLevel', read_only=True)
     board = serializers.CharField(source='learner.board', read_only=True)
     state = serializers.CharField(source='learner.state', read_only=True)
     area = serializers.CharField(source='learner.area', read_only=True)
@@ -14,6 +14,6 @@ class JobListingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = JobListing
-        fields = ['id', 'created_at', 'learner_name', 'learner_phone', 'learner_email', 'grade', 'board', 'state', 'area', 'subjects']
+        fields = ['id', 'created_at', 'learner_name', 'learner_phone', 'learner_email', 'educationLevel', 'board', 'state', 'area', 'subjects']
 
 

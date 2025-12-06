@@ -28,7 +28,7 @@ class CreateLearnerAccountView(APIView):
                 "studentBoard": "CBSE",
                 "parentName": "Parent Name",
                 "parentEmail": "parent@example.com",
-                "grade": "12",
+                "educationLevel": "12",
                 "subjects": ["Maths", "Science"],
                 "budget": "1000",
                 "preferredMode": "Offline",
@@ -89,7 +89,7 @@ class CreateLearnerAccountView(APIView):
         learner.board = data['studentBoard'].strip()
         learner.guardian_name = data['parentName'].strip()
         learner.guardian_email = data['parentEmail'].strip().lower()
-        learner.grade = data['grade'].strip()
+        learner.educationLevel = data['educationLevel'].strip()
         learner.budget = float(data['budget'])
         learner.preferred_mode = data['preferredMode']
         learner.area = data['area'].strip()
@@ -131,3 +131,101 @@ class CreateLearnerAccountView(APIView):
             'refresh': tokens['refresh'],
             'learner': learner_data
         }, status=status.HTTP_201_CREATED)
+
+
+class CognitiveAssessmentView(APIView):
+    """Handle cognitive assessment submission for learners"""
+    
+    def post(self, request):
+        """
+        Submit cognitive assessment results
+        
+        Expected body format:
+        {
+          "s2": {
+            "choice": "A" | "B" | "C",
+            "confidence": number or null,
+            "reaction_time_ms": number or null,
+            "switch_count": number
+          },
+          "s3": {
+            "rule": "shape" | "color" | "mixed",
+            "corrections": number,
+            "time_ms": number or null
+          },
+          "s4": {
+            "is_correct": bool,
+            "swap_count": number
+          },
+          "s5": {
+            "answer": "yes" | "no" | "not_sure",
+            "explanation": string
+          },
+          "s6": {
+            "choice": "A" | "B" | "C" | "D",
+            "reaction_time_ms": number or null
+          }
+        }
+        """
+        from auth_app.authentication import JWTAuthentication
+        from .models import CognitiveAssessment
+        from .serializers import CognitiveAssessmentInputSerializer, CognitiveAssessmentOutputSerializer
+        from .assessment_utils import compute_scores
+        
+        # Authenticate learner
+        auth = JWTAuthentication()
+        auth_result = auth.authenticate(request)
+        if not auth_result:
+            return Response(
+                {'detail': 'Authentication credentials were not provided'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        user, token = auth_result
+        if not hasattr(user, 'user_type') or user.user_type != 'learner':
+            return Response(
+                {'detail': 'This endpoint is only accessible to learners'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Check if learner already has a cognitive assessment
+        try:
+            existing_assessment = CognitiveAssessment.objects.get(learner=user)
+            return Response(
+                {'detail': 'Assessment already completed.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except CognitiveAssessment.DoesNotExist:
+            pass  # Good, no existing assessment
+        
+        # Validate input data
+        serializer = CognitiveAssessmentInputSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Create new assessment instance
+            assessment = CognitiveAssessment(learner=user)
+            
+            # Compute scores and populate fields
+            compute_scores(assessment, serializer.validated_data)
+            
+            # Prepare response data
+            response_data = {
+                'conservation_score': assessment.conservation_score,
+                'classification_score': assessment.classification_score,
+                'seriation_score': assessment.seriation_score,
+                'reversibility_score': assessment.reversibility_score,
+                'hypothetical_thinking_score': assessment.hypothetical_thinking_score,
+                'piaget_construct_score': assessment.piaget_construct_score,
+                'piaget_stage': assessment.piaget_stage,
+                'summary_points': assessment.summary_points
+            }
+            
+            return Response(response_data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            return Response(
+                {'detail': f'An error occurred while processing the assessment: {str(e)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

@@ -5,8 +5,8 @@ from django.contrib.gis.admin import GISModelAdmin
 
 @admin.register(Learner)
 class LearnerAdmin(GISModelAdmin):
-    list_display = ['name', 'email', 'primary_contact', 'grade', 'board', 'state', 'created_at']
-    list_filter = ['grade', 'board', 'preferred_mode', 'state', 'created_at']
+    list_display = ['name', 'email', 'primary_contact', 'educationLevel', 'board', 'state', 'created_at']
+    list_filter = ['educationLevel', 'board', 'preferred_mode', 'state', 'created_at']
     search_fields = ['name', 'email', 'primary_contact', 'secondary_contact', 'guardian_name', 'area', 'pincode']
     readonly_fields = ['id', 'created_at', 'updated_at', 'password_last_modified']
     
@@ -18,7 +18,7 @@ class LearnerAdmin(GISModelAdmin):
             'fields': ('state', 'area', 'pincode', 'location', 'latitude', 'longitude')
         }),
         ('Learner Details', {
-            'fields': ('grade', 'board', 'subjects', 'budget', 'preferred_mode')
+            'fields': ('educationLevel', 'board', 'subjects', 'budget', 'preferred_mode')
         }),
         ('Guardian Information', {
             'fields': ('guardian_name', 'guardian_email')

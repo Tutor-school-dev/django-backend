@@ -157,11 +157,17 @@ class Command(BaseCommand):
             action='store_true',
             help='Clear existing data before populating'
         )
+        parser.add_argument(
+            '--same-city',
+            action='store_true',
+            help='Create tutors in the same city teaching same subjects'
+        )
 
     def handle(self, *args, **options):
         num_tutors = options['tutors']
         num_learners = options['learners']
         clear_data = options['clear']
+        same_city = options['same_city']
 
         if clear_data:
             self.stdout.write(self.style.WARNING('Clearing existing data...'))
@@ -171,8 +177,12 @@ class Command(BaseCommand):
 
         # Create tutors
         self.stdout.write(self.style.SUCCESS(f'Creating {num_tutors} tutors...'))
-        tutors_created = self.create_tutors(num_tutors)
-        self.stdout.write(self.style.SUCCESS(f'✓ Created {tutors_created} tutors'))
+        if same_city:
+            tutors_created = self.create_tutors_same_city(num_tutors)
+            self.stdout.write(self.style.SUCCESS(f'✓ Created {tutors_created} tutors in same city with same subjects'))
+        else:
+            tutors_created = self.create_tutors(num_tutors)
+            self.stdout.write(self.style.SUCCESS(f'✓ Created {tutors_created} tutors'))
 
         # Create learners
         self.stdout.write(self.style.SUCCESS(f'Creating {num_learners} learners...'))
@@ -285,6 +295,102 @@ class Command(BaseCommand):
         
         return created
 
+    def create_tutors_same_city(self, count):
+        """Create sample tutor records in the same city teaching same subjects"""
+        created = 0
+        
+        # Get all class level choices
+        class_levels = [choice[0] for choice in CLASS_LEVEL_CHOICES]
+        
+        # Pick one city/state/area combination for all tutors
+        state = random.choice(list(LOCATION_DATA.keys()))
+        city = random.choice(list(LOCATION_DATA[state].keys()))
+        areas = LOCATION_DATA[state][city]
+        
+        # Pick one set of subjects for all tutors
+        common_subjects = random.choice(SUBJECTS)
+        subjects_str = str(common_subjects)
+        
+        # Pick one class level that all tutors will teach
+        common_class_level = random.choice(class_levels)
+        
+        self.stdout.write(self.style.SUCCESS(
+            f'\nCreating tutors in: {state.replace("-", " ").title()}, '
+            f'{city.replace("-", " ").title()}'
+        ))
+        self.stdout.write(self.style.SUCCESS(
+            f'Teaching subjects: {", ".join(common_subjects)}'
+        ))
+        self.stdout.write(self.style.SUCCESS(
+            f'Class level: {common_class_level}\n'
+        ))
+        
+        for i in range(count):
+            try:
+                first_name = random.choice(TUTOR_FIRST_NAMES)
+                last_name = random.choice(TUTOR_LAST_NAMES)
+                name = f"{first_name} {last_name}"
+                
+                # Generate unique email and phone
+                email = f"{first_name.lower()}.{last_name.lower()}{i}@tutorschool.in"
+                phone = f"+91{random.randint(7000000000, 9999999999)}"
+                
+                # Use same city but different areas
+                area = random.choice(areas)
+                lat, lng = self.get_coordinates_with_offset()
+                pincode = self.get_random_pincode()
+                
+                # Create point for PostGIS
+                location = Point(lng, lat, srid=4326)
+                
+                # Create tutor with common subjects and class level
+                teacher = Teacher.objects.create(
+                    name=name,
+                    email=email,
+                    primary_contact=phone,
+                    secondary_contact=f"+91{random.randint(7000000000, 9999999999)}" if random.random() > 0.5 else None,
+                    password='',  # Will be set through OTP/Google auth
+                    
+                    # Location - same city for all
+                    state=state.replace('-', ' ').title(),
+                    city=city.replace('-', ' ').title(),
+                    area=area.replace('-', ' ').title(),
+                    pincode=pincode,
+                    location=location,
+                    latitude=str(lat),
+                    longitude=str(lng),
+                    
+                    # Profile - vary these fields
+                    introduction=f"Experienced tutor with {random.randint(2, 15)} years of teaching experience.",
+                    teaching_desc=f"Specializing in {', '.join(common_subjects[:2])}. Passionate about making learning enjoyable.",
+                    lesson_price=Decimal(random.choice([300, 400, 500, 600, 700, 800, 1000, 1200, 1500])),
+                    teaching_mode=random.choice(['ONLINE', 'OFFLINE', 'BOTH']),
+                    
+                    # Academic - same subjects and class level for all
+                    class_level=common_class_level,
+                    current_status=random.choice(CURRENT_STATUS),
+                    degree=random.choice(DEGREES),
+                    university=random.choice(UNIVERSITIES),
+                    subjects=subjects_str,
+                    referral=random.choice(REFERRALS),
+                    
+                    # Onboarding
+                    basic_done=True,
+                    location_done=True,
+                    later_onboarding_done=random.choice([True, False]),
+                    
+                    # Subscription (some with active subscription)
+                    subscription_validity=timezone.now() + timedelta(days=random.randint(0, 90)) if random.random() > 0.3 else None
+                )
+                
+                created += 1
+                
+            except Exception as e:
+                self.stdout.write(self.style.ERROR(f'Error creating tutor {i}: {str(e)}'))
+                continue
+        
+        return created
+
     def create_learners(self, count):
         """Create sample learner records"""
         created = 0
@@ -317,8 +423,8 @@ class Command(BaseCommand):
                 subjects = random.choice(SUBJECTS)
                 subjects_str = str(subjects)
                 
-                # Random grade
-                grade = random.choice(school_levels)
+                # Random educationLevel
+                educationLevel = random.choice(school_levels)
                 
                 # Create learner
                 learner = Learner.objects.create(
@@ -337,7 +443,7 @@ class Command(BaseCommand):
                     longitude=str(lng),
                     
                     # Learner specific
-                    grade=grade,
+                    educationLevel=educationLevel,
                     board=random.choice(BOARDS),
                     guardian_name=f"{parent_first} {parent_last}",
                     guardian_email=parent_email,

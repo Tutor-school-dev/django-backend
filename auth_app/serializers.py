@@ -63,7 +63,7 @@ class LearnerSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'name', 'email', 'primary_contact', 'secondary_contact',
             'state', 'area', 'pincode', 'latitude', 'longitude',
-            'grade', 'board', 'guardian_name', 'guardian_email',
+            'educationLevel', 'board', 'guardian_name', 'guardian_email',
             'subjects', 'budget', 'created_at'
         ]
         read_only_fields = ['id', 'created_at']
