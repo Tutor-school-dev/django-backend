@@ -210,6 +210,10 @@ class CognitiveAssessmentView(APIView):
             # Compute scores and populate fields
             compute_scores(assessment, serializer.validated_data)
             
+            # Get bands and detailed scores
+            from .assessment_utils import get_assessment_bands_and_scores
+            bands_and_scores = get_assessment_bands_and_scores(assessment)
+            
             # Prepare response data
             response_data = {
                 'conservation_score': assessment.conservation_score,
@@ -219,7 +223,8 @@ class CognitiveAssessmentView(APIView):
                 'hypothetical_thinking_score': assessment.hypothetical_thinking_score,
                 'piaget_construct_score': assessment.piaget_construct_score,
                 'piaget_stage': assessment.piaget_stage,
-                'summary_points': assessment.summary_points
+                'summary_points': assessment.summary_points,
+                'detailed_bands_and_scores': bands_and_scores
             }
             
             return Response(response_data, status=status.HTTP_201_CREATED)

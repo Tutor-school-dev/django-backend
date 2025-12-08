@@ -40,16 +40,14 @@ from .models import CognitiveAssessment
 @admin.register(CognitiveAssessment)
 class CognitiveAssessmentAdmin(admin.ModelAdmin):
     """
-    Admin interface for Cognitive Assessments
+    Cognitive Assessment Results
     
-    This assessment evaluates learners across 5 cognitive domains based on Piaget's theory:
-    - Conservation: Understanding that quantity remains the same despite changes in appearance
-    - Classification: Ability to group objects by shared characteristics  
-    - Seriation: Arranging objects in logical order/sequence
-    - Reversibility: Understanding that operations can be undone
-    - Hypothetical Thinking: Ability to reason about abstract, "what if" scenarios
-    
-    Each learner can complete this assessment only once.
+    Shows how well learners think and solve problems across 5 key areas:
+    • Conservation - Understanding amounts stay the same
+    • Classification - Grouping things that belong together
+    • Seriation - Putting things in order
+    • Reversibility - Understanding things can be undone
+    • Hypothetical Thinking - Imagining "what if" situations
     """
     
     # Display key info in the list view
@@ -130,6 +128,12 @@ class CognitiveAssessmentAdmin(admin.ModelAdmin):
             ),
             'description': 'Computed scores for each cognitive domain based on the learner\'s responses. Higher scores indicate stronger abilities in that domain.'
         }),
+        ('Performance Bands & Analysis', {
+            'fields': (
+                'detailed_bands_and_scores',
+            ),
+            'description': 'Detailed performance bands (1-5) and scores for each cognitive domain, stored as structured data for analysis and reporting.'
+        }),
         ('Piaget Stage & Learning Profile', {
             'fields': (
                 'piaget_stage',
@@ -190,34 +194,56 @@ class CognitiveAssessmentAdmin(admin.ModelAdmin):
     assessment_completion_date.admin_order_field = "created_at"
     
     def assessment_summary(self, obj):
-        """Provide a comprehensive summary of the assessment results"""
+        """Simple summary of learner's cognitive abilities"""
+        
+        # Get performance level description
+        score = obj.piaget_construct_score
+        if score >= 75:
+            level = "Advanced thinking skills"
+        elif score >= 60:
+            level = "Good thinking skills"
+        elif score >= 40:
+            level = "Developing thinking skills"
+        else:
+            level = "Early thinking skills"
+            
+        # Get strongest and weakest areas
+        scores = {
+            'Conservation': obj.conservation_score,
+            'Classification': obj.classification_score, 
+            'Seriation': obj.seriation_score,
+            'Reversibility': obj.reversibility_score,
+            'Hypothetical Thinking': obj.hypothetical_thinking_score
+        }
+        
+        strongest = max(scores, key=scores.get)
+        weakest = min(scores, key=scores.get)
+        
         return f"""
-        🎯 Overall Performance: {obj.piaget_construct_score}/100 ({obj.get_piaget_stage_display()})
+        📊 Overall: {score}/100 - {level}
+        🎯 Cognitive Stage: {obj.get_piaget_stage_display()}
         
-        📊 Domain Breakdown:
-        • Conservation: {obj.conservation_score}/100 (understanding quantity consistency)
-        • Classification: {obj.classification_score}/100 (grouping & pattern recognition)  
-        • Seriation: {obj.seriation_score}/100 (logical ordering abilities)
-        • Reversibility: {obj.reversibility_score}/100 (understanding operation reversal)
-        • Hypothetical Thinking: {obj.hypothetical_thinking_score}/100 (abstract reasoning)
+        💪 Strongest Area: {strongest} ({scores[strongest]}/100)
+        📈 Growing Area: {weakest} ({scores[weakest]}/100)
         
-        🎨 Learning Profile:
-        • Primary learning modality: {obj.primary_modality.title()}
-        • Prefers structured approach: {"Yes" if obj.prefers_structure else "No"}
-        
-        💡 Key Insights: {', '.join(obj.summary_points)}
+        🎨 Learning Style: {obj.primary_modality.title()} learner, {'structured' if obj.prefers_structure else 'flexible'} approach
         """
-    assessment_summary.short_description = "Assessment Summary"
+    assessment_summary.short_description = "Quick Summary"
     
     def detailed_scores(self, obj):
-        """Display detailed breakdown of all cognitive scores"""
-        return f"""
-        Conservation Score: {obj.conservation_score}/100
-        Classification Score: {obj.classification_score}/100  
-        Seriation Score: {obj.seriation_score}/100
-        Reversibility Score: {obj.reversibility_score}/100
-        Hypothetical Thinking Score: {obj.hypothetical_thinking_score}/100
+        """Show scores for each thinking skill area"""
         
-        Overall Piaget Construct Score: {obj.piaget_construct_score}/100
+        def get_level(score):
+            if score >= 80: return "🟢 Strong"
+            elif score >= 60: return "🟡 Good"
+            elif score >= 40: return "🟠 Fair"
+            else: return "🔴 Developing"
+            
+        return f"""
+        Conservation (understanding amounts): {obj.conservation_score}/100 {get_level(obj.conservation_score)}
+        Classification (grouping things): {obj.classification_score}/100 {get_level(obj.classification_score)}
+        Seriation (putting in order): {obj.seriation_score}/100 {get_level(obj.seriation_score)}
+        Reversibility (undoing actions): {obj.reversibility_score}/100 {get_level(obj.reversibility_score)}
+        Hypothetical Thinking (what if): {obj.hypothetical_thinking_score}/100 {get_level(obj.hypothetical_thinking_score)}
         """
-    detailed_scores.short_description = "Detailed Scores"
+    detailed_scores.short_description = "Thinking Skills Breakdown"

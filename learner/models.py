@@ -168,6 +168,9 @@ class CognitiveAssessment(models.Model):
     prefers_structure = models.BooleanField(default=True)
     summary_points = models.JSONField(default=list)  # list of bullet point strings
     
+    # Performance bands and detailed scores
+    detailed_bands_and_scores = models.JSONField(default=dict)  # stores bands and scores for each domain
+    
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
     
