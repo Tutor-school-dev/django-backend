@@ -18,7 +18,7 @@ class Command(BaseCommand):
         learner = Learner.objects.create(
             id=learner_id,
             name="Test Student",
-            phone="+919876543210",
+            primary_contact="+919876543210",
             email="teststudent@example.com",
             board="CBSE",
             guardian_name="Test Parent",
@@ -130,7 +130,7 @@ class Command(BaseCommand):
             tutor = Teacher.objects.create(
                 id=tutor_id,
                 name=tutor_data['name'],
-                phone=f"+9198765432{len(created_tutors)}0",
+                primary_contact=f"+9198765432{len(created_tutors)}0",
                 email=f"tutor{len(created_tutors)}@example.com",
                 lesson_price=tutor_data['price'],
                 subjects=tutor_data['subjects'],

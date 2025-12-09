@@ -261,21 +261,29 @@ class TutorMatchingView(APIView):
         """
         from auth_app.authentication import JWTAuthentication
         from .services.matching_service import TutorMatchingService
+        from config.logger import get_logger
         import time
         
+        logger = get_logger(__name__)
         start_time = time.time()
+        
+        logger.info(f"Tutor matching API called from IP: {request.META.get('REMOTE_ADDR', 'Unknown')}")
         
         # Authenticate learner
         auth = JWTAuthentication()
         auth_result = auth.authenticate(request)
         if not auth_result:
+            logger.warning("Tutor matching request failed - no authentication provided")
             return Response(
                 {'error': 'Authentication credentials were not provided'},
                 status=status.HTTP_401_UNAUTHORIZED
             )
         
         user, token = auth_result
+        logger.info(f"Authenticated user: {user.id} (type: {getattr(user, 'user_type', 'unknown')})")
+        
         if not hasattr(user, 'user_type') or user.user_type != 'learner':
+            logger.warning(f"Non-learner attempted to access matching API: {user.id}")
             return Response(
                 {'error': 'This endpoint is only accessible to learners'},
                 status=status.HTTP_403_FORBIDDEN
@@ -283,28 +291,33 @@ class TutorMatchingView(APIView):
         
         try:
             # Initialize matching service
+            logger.info("Initializing TutorMatchingService...")
             matching_service = TutorMatchingService()
             
             # Get matches
+            logger.info(f"Starting matching process for learner {user.id}")
             result = matching_service.get_best_matches(user)
             
             # Add timing information
             processing_time = int((time.time() - start_time) * 1000)
             result['processing_time_ms'] = processing_time
             
+            logger.info(f"Matching completed successfully for learner {user.id} in {processing_time}ms")
             return Response(result, status=status.HTTP_200_OK)
             
         except ValueError as e:
             # Handle business logic errors (no assessment, no tutors, etc.)
+            logger.warning(f"Matching validation error for learner {user.id}: {str(e)}")
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
         except Exception as e:
             # Handle unexpected errors
-            from config.logger import get_logger
-            logger = get_logger(__name__)
             logger.error(f"Tutor matching error for learner {user.id}: {str(e)}")
+            logger.error(f"Error type: {type(e).__name__}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
             
             return Response(
                 {'error': 'An error occurred while finding tutor matches. Please try again.'},

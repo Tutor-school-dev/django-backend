@@ -20,16 +20,26 @@ class AIMatchingService:
     
     def __init__(self):
         """Initialize OpenAI client"""
+        logger.info("Initializing AIMatchingService...")
+        
         if OPENAI_AVAILABLE:
-            self.client = openai.OpenAI(
-                api_key=getattr(settings, 'OPENAI_API_KEY', '')
-            )
+            api_key = getattr(settings, 'OPENAI_API_KEY', '')
+            if api_key:
+                logger.info(f"OpenAI package available, API key provided (length: {len(api_key)})")
+                self.client = openai.OpenAI(api_key=api_key)
+                logger.info("OpenAI client initialized successfully")
+            else:
+                logger.warning("OpenAI package available but no API key provided")
+                self.client = None
         else:
+            logger.warning("OpenAI package not available - will use fallback matching")
             self.client = None
             
         self.model = getattr(settings, 'OPENAI_MODEL', 'gpt-4o-mini')
         self.max_tokens = getattr(settings, 'OPENAI_MAX_TOKENS', 800)
         self.timeout = getattr(settings, 'OPENAI_TIMEOUT', 30)
+        
+        logger.info(f"AI Service config - Model: {self.model}, Max tokens: {self.max_tokens}, Timeout: {self.timeout}s")
         
     def get_tutor_matches(self, learner_profile, tutors_data, cache_key=None):
         """
@@ -44,22 +54,35 @@ class AIMatchingService:
             dict: AI response with ranked tutors
         """
         
+        logger.info(f"Starting AI matching for {len(tutors_data)} tutors")
+        
         # Check cache first
         if cache_key:
+            logger.debug(f"Checking cache with key: {cache_key}")
             cached_result = cache.get(cache_key)
             if cached_result:
                 logger.info(f"Cache hit for matching request: {cache_key}")
                 return cached_result
+            logger.debug("No cached result found")
         
         try:
             # Check if OpenAI is available
-            if not OPENAI_AVAILABLE or not self.client:
-                raise Exception("OpenAI service not available")
+            logger.debug(f"OpenAI availability check - OPENAI_AVAILABLE: {OPENAI_AVAILABLE}, client: {self.client is not None}")
+            if not OPENAI_AVAILABLE:
+                logger.error("OpenAI package not installed or not imported successfully")
+                raise Exception("OpenAI package not available")
+            
+            if not self.client:
+                logger.error("OpenAI client not initialized (likely missing API key)")
+                raise Exception("OpenAI client not initialized")
             
             # Prepare token-optimized prompt
+            logger.debug("Building matching prompt...")
             prompt = self._build_matching_prompt(learner_profile, tutors_data)
+            logger.info(f"Prompt built - length: {len(prompt)} characters")
             
             # Call OpenAI API
+            logger.info(f"Calling OpenAI API - Model: {self.model}, Max tokens: {self.max_tokens}")
             start_time = timezone.now()
             
             response = self.client.chat.completions.create(
@@ -79,10 +102,15 @@ class AIMatchingService:
             )
             
             processing_time = (timezone.now() - start_time).total_seconds() * 1000
+            logger.info(f"OpenAI API call completed in {processing_time}ms")
             
             # Parse AI response
             ai_content = response.choices[0].message.content.strip()
+            logger.debug(f"AI response length: {len(ai_content)} characters")
+            logger.debug(f"AI response preview: {ai_content[:200]}...")
+            
             result = json.loads(ai_content)
+            logger.info(f"AI response parsed successfully - found {len(result.get('matches', []))} matches")
             
             # Add metadata
             result['ai_processing_time_ms'] = processing_time
@@ -93,14 +121,19 @@ class AIMatchingService:
                 cache.set(cache_key, result, 3600)
                 logger.info(f"Cached matching result: {cache_key}")
             
-            logger.info(f"AI matching completed in {processing_time}ms")
+            logger.info(f"AI matching completed successfully in {processing_time}ms")
             return result
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse AI response: {e}")
+            logger.error(f"AI response content: {ai_content if 'ai_content' in locals() else 'No response content'}")
             raise Exception("AI returned invalid response format")
+        except openai.OpenAIError as e:
+            logger.error(f"OpenAI API error: {e}")
+            raise Exception(f"OpenAI API error: {str(e)}")
         except Exception as e:
-            logger.error(f"AI matching failed: {e}")
+            logger.error(f"AI matching failed with unexpected error: {e}")
+            logger.error(f"Error type: {type(e).__name__}")
             raise Exception(f"AI service error: {str(e)}")
     
     def _build_matching_prompt(self, learner_profile, tutors_data):

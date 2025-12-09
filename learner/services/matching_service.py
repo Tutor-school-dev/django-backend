@@ -26,22 +26,34 @@ class TutorMatchingService:
             dict: Matching results with tutor data and scores
         """
         
+        logger.info(f"Starting tutor matching for learner: {learner.id} ({learner.name})")
+        
         # 1. Validate learner has cognitive assessment
         try:
             assessment = CognitiveAssessment.objects.get(learner=learner)
+            logger.info(f"Found cognitive assessment for learner {learner.id}")
         except CognitiveAssessment.DoesNotExist:
+            logger.error(f"No cognitive assessment found for learner {learner.id}")
             raise ValueError("Cognitive assessment required")
         
         # 2. Get available tutors with complete pedagogy profiles
+        logger.info("Fetching qualified tutors...")
         tutors = self._get_qualified_tutors()
+        logger.info(f"Found {tutors.count()} qualified tutors")
         if not tutors:
+            logger.warning("No qualified tutors available in database")
             raise ValueError("No qualified tutors available")
         
         # 3. Prepare learner profile
         learner_profile = self._prepare_learner_profile(learner, assessment)
         
         # 4. Calculate compatibility scores
+        logger.info("Calculating cognitive compatibility scores...")
         tutors_data = self._calculate_compatibility_scores(tutors, learner_profile)
+        logger.info(f"Compatibility scores calculated for {len(tutors_data)} tutors")
+        
+        for i, tutor in enumerate(tutors_data[:3]):  # Log top 3 scores
+            logger.debug(f"Tutor {i+1}: {tutor['name']} - Cognitive: {tutor['cognitive_score']}/8, Subject: {tutor['subject_score']:.1f}/10")
         
         # 5. Generate cache key
         tutors_hash = self._generate_tutors_hash(tutors)
@@ -49,18 +61,25 @@ class TutorMatchingService:
         cache_key = AIMatchingService.generate_cache_key(
             str(learner.id), tutors_hash, cognitive_hash
         )
+        logger.info(f"Generated cache key: {cache_key}")
         
         # 6. Get AI ranking
+        logger.info("Attempting AI-powered ranking...")
         try:
             ai_result = self.ai_service.get_tutor_matches(
                 learner_profile, tutors_data, cache_key
             )
+            logger.info("AI ranking completed successfully")
         except Exception as e:
             logger.warning(f"AI matching failed, using fallback: {e}")
+            logger.info("Switching to rule-based fallback matching")
             ai_result = self._fallback_matching(tutors_data)
         
         # 7. Prepare final response with full tutor data
-        return self._prepare_response(ai_result, tutors)
+        logger.info("Preparing final response with tutor details...")
+        final_response = self._prepare_response(ai_result, tutors)
+        logger.info(f"Matching completed - returning {len(final_response.get('matches', []))} matches")
+        return final_response
     
     def _get_qualified_tutors(self):
         """Get tutors with complete pedagogy profiles"""
@@ -239,11 +258,15 @@ class TutorMatchingService:
     def _fallback_matching(self, tutors_data):
         """Fallback matching when AI fails"""
         
+        logger.info("Using rule-based fallback matching algorithm")
+        
         # Sort by cognitive score, then subject score, then price
         sorted_tutors = sorted(
             tutors_data,
             key=lambda t: (-t['cognitive_score'], -t['subject_score'], t['price'])
         )
+        
+        logger.debug(f"Fallback ranking: {[(t['name'], t['cognitive_score'], t['subject_score']) for t in sorted_tutors[:3]]}")
         
         matches = []
         for i, tutor in enumerate(sorted_tutors[:3]):

@@ -179,16 +179,29 @@ This should show detailed matching information and verify the system works end-t
 
 ## Troubleshooting
 
+### Step 1: Run Diagnostics First
+```bash
+python manage.py diagnose_openai
+```
+This will check all OpenAI configuration and show exactly what's wrong.
+
 ### If you get "No module named 'openai'":
 ```bash
 pip install openai==1.58.1
 ```
 
 ### If you get "OPENAI_API_KEY not set":
-Add to your `.env` file:
+1. Check your `.env` file exists in project root
+2. Add to your `.env` file:
 ```
 OPENAI_API_KEY=your_openai_key_here
 ```
+3. Restart Django server after adding the key
+
+### If you get "OpenAI service not available":
+1. Run diagnostics: `python manage.py diagnose_openai`
+2. Check logs: `tail -f logs/application-logs.log`
+3. Verify API key is valid (diagnostics will test this)
 
 ### If you get database errors:
 ```bash
@@ -200,6 +213,25 @@ python manage.py migrate
 Run the test data creation command again:
 ```bash
 python manage.py create_test_data
+```
+
+### View Detailed Logs:
+```bash
+# Watch live logs
+tail -f logs/application-logs.log
+
+# Search for specific errors
+grep -i "openai\|matching\|error" logs/application-logs.log
+
+# Check error logs only
+tail -f logs/error-logs.log
+```
+
+### Test Without OpenAI (Fallback Mode):
+If OpenAI is not working, the system should automatically fall back to rule-based matching. You'll see this in the logs:
+```
+WARNING - AI matching failed, using fallback: OpenAI service not available
+INFO - Switching to rule-based fallback matching
 ```
 
 ## Expected Performance

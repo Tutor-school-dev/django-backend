@@ -170,8 +170,8 @@ class CognitiveAssessmentInputSerializer(serializers.Serializer):
             raise serializers.ValidationError("Band values must be between 0-4")
         
         ac = value['ac']
-        if not (0 <= ac <= 1):
-            raise serializers.ValidationError("ac must be between 0-1")
+        if not (0 <= ac <= 2):
+            raise serializers.ValidationError("ac must be between 0-2")
             
         if not isinstance(value['correctness'], bool):
             raise serializers.ValidationError("correctness must be boolean")
@@ -222,8 +222,8 @@ class CognitiveAssessmentInputSerializer(serializers.Serializer):
             raise serializers.ValidationError("Band values must be between 0-4")
         
         ac = value['ac']
-        if not (0 <= ac <= 1):
-            raise serializers.ValidationError("ac must be between 0-1")
+        if not (0 <= ac <= 2):
+            raise serializers.ValidationError("ac must be between 0-2")
             
         if not isinstance(value['correctness'], bool):
             raise serializers.ValidationError("correctness must be boolean")
@@ -244,8 +244,8 @@ class CognitiveAssessmentInputSerializer(serializers.Serializer):
             raise serializers.ValidationError("Band values must be between 0-4")
         
         ac = value['ac']
-        if not (0 <= ac <= 1):
-            raise serializers.ValidationError("ac must be between 0-1")
+        if not (0 <= ac <= 2):
+            raise serializers.ValidationError("ac must be between 0-2")
         
         return value
 
