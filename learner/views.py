@@ -225,3 +225,88 @@ class CognitiveAssessmentView(APIView):
                 {'detail': f'An error occurred while processing the assessment: {str(e)}'},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+class TutorMatchingView(APIView):
+    """
+    AI-powered tutor matching endpoint
+    Returns top 3 tutor matches based on cognitive compatibility and subject overlap
+    """
+    
+    def get(self, request):
+        """
+        Get best tutor matches for authenticated learner
+        
+        Returns:
+        {
+            "success": true,
+            "matches": [
+                {
+                    "tutor": {
+                        "id": "uuid",
+                        "name": "Tutor Name",
+                        "lesson_price": 500.0,
+                        "subjects": "Math, Science",
+                        "area": "Location",
+                        // ... other tutor fields
+                    },
+                    "match_details": {
+                        "compatibility_score": 85.5,
+                        "reasoning": "AI explanation of why this tutor matches",
+                        "subject_explanation": "Subject compatibility analysis"
+                    }
+                }
+            ]
+        }
+        """
+        from auth_app.authentication import JWTAuthentication
+        from .services.matching_service import TutorMatchingService
+        import time
+        
+        start_time = time.time()
+        
+        # Authenticate learner
+        auth = JWTAuthentication()
+        auth_result = auth.authenticate(request)
+        if not auth_result:
+            return Response(
+                {'error': 'Authentication credentials were not provided'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        user, token = auth_result
+        if not hasattr(user, 'user_type') or user.user_type != 'learner':
+            return Response(
+                {'error': 'This endpoint is only accessible to learners'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            # Initialize matching service
+            matching_service = TutorMatchingService()
+            
+            # Get matches
+            result = matching_service.get_best_matches(user)
+            
+            # Add timing information
+            processing_time = int((time.time() - start_time) * 1000)
+            result['processing_time_ms'] = processing_time
+            
+            return Response(result, status=status.HTTP_200_OK)
+            
+        except ValueError as e:
+            # Handle business logic errors (no assessment, no tutors, etc.)
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except Exception as e:
+            # Handle unexpected errors
+            from config.logger import get_logger
+            logger = get_logger(__name__)
+            logger.error(f"Tutor matching error for learner {user.id}: {str(e)}")
+            
+            return Response(
+                {'error': 'An error occurred while finding tutor matches. Please try again.'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

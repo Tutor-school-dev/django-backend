@@ -60,6 +60,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'learner.middleware.RateLimitMiddleware',  # Rate limiting for matching API
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -283,4 +284,10 @@ LOGGING = {
             'propagate': False,
         },
     },
-}  
+}
+
+# OpenAI Configuration
+OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
+OPENAI_MODEL = config('OPENAI_MODEL', default='gpt-4o-mini')
+OPENAI_MAX_TOKENS = config('OPENAI_MAX_TOKENS', default=1000, cast=int)
+OPENAI_TIMEOUT = config('OPENAI_TIMEOUT', default=30, cast=int)  
