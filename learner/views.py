@@ -138,39 +138,44 @@ class CognitiveAssessmentView(APIView):
     
     def post(self, request):
         """
-        Submit cognitive assessment results
+        Submit cognitive assessment results with new 11-parameter system
         
         Expected body format:
         {
-          "s2": {
-            "choice": "A" | "B" | "C",
-            "confidence": number or null,
-            "reaction_time_ms": number or null,
-            "switch_count": number
+          "question1_conservation": {
+            "rt_band": 0-4,
+            "h_band": 0-4,
+            "ac": 0-1,
+            "correctness": boolean
           },
-          "s3": {
-            "rule": "shape" | "color" | "mixed",
-            "corrections": number,
-            "time_ms": number or null
+          "question2_classification": {
+            "corr_band": 0-4,
+            "idle_band": 0-4,
+            "t_band": 0-4
           },
-          "s4": {
-            "is_correct": bool,
-            "swap_count": number
+          "question3_seriation": {
+            "s_band": 0-4,
+            "m_band": 0-4,
+            "tp_band": 0-4,
+            "t_band": 0-4
           },
-          "s5": {
-            "answer": "yes" | "no" | "not_sure",
-            "explanation": string
+          "question4_reversibility": {
+            "rt_band": 0-4,
+            "h_band": 0-4,
+            "ac": 0-1,
+            "correctness": boolean
           },
-          "s6": {
-            "choice": "A" | "B" | "C" | "D",
-            "reaction_time_ms": number or null
+          "question5_hypothetical": {
+            "rt_band": 0-4,
+            "h_band": 0-4,
+            "ac": 0-1
           }
         }
         """
         from auth_app.authentication import JWTAuthentication
         from .models import CognitiveAssessment
         from .serializers import CognitiveAssessmentInputSerializer, CognitiveAssessmentOutputSerializer
-        from .assessment_utils import compute_scores
+        from .assessment_utils import compute_scores, get_assessment_response
         
         # Authenticate learner
         auth = JWTAuthentication()
@@ -207,25 +212,11 @@ class CognitiveAssessmentView(APIView):
             # Create new assessment instance
             assessment = CognitiveAssessment(learner=user)
             
-            # Compute scores and populate fields
+            # Compute scores and populate fields using new system
             compute_scores(assessment, serializer.validated_data)
             
-            # Get bands and detailed scores
-            from .assessment_utils import get_assessment_bands_and_scores
-            bands_and_scores = get_assessment_bands_and_scores(assessment)
-            
-            # Prepare response data
-            response_data = {
-                'conservation_score': assessment.conservation_score,
-                'classification_score': assessment.classification_score,
-                'seriation_score': assessment.seriation_score,
-                'reversibility_score': assessment.reversibility_score,
-                'hypothetical_thinking_score': assessment.hypothetical_thinking_score,
-                'piaget_construct_score': assessment.piaget_construct_score,
-                'piaget_stage': assessment.piaget_stage,
-                'summary_points': assessment.summary_points,
-                'detailed_bands_and_scores': bands_and_scores
-            }
+            # Get complete assessment response in new format
+            response_data = get_assessment_response(assessment)
             
             return Response(response_data, status=status.HTTP_201_CREATED)
             

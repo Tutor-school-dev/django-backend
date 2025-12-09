@@ -87,44 +87,8 @@ class Learner(models.Model):
 class CognitiveAssessment(models.Model):
     """Cognitive assessment model for learners - one assessment per learner"""
     
-    # Choice constants
-    S2_CHOICES = [
-        ('A', 'A'),
-        ('B', 'B'), 
-        ('C', 'C')
-    ]
-    
-    S3_RULE_CHOICES = [
-        ('shape', 'Shape'),
-        ('color', 'Color'),
-        ('mixed', 'Mixed')
-    ]
-    
-    S5_ANSWER_CHOICES = [
-        ('yes', 'Yes'),
-        ('no', 'No'),
-        ('not_sure', 'Not Sure')
-    ]
-    
-    S6_CHOICES = [
-        ('A', 'A'),
-        ('B', 'B'),
-        ('C', 'C'),
-        ('D', 'D')
-    ]
-    
-    PIAGET_STAGE_CHOICES = [
-        ('preoperational', 'Preoperational'),
-        ('concrete', 'Concrete operational'),
-        ('transition_formal', 'Transition to formal'),
-        ('formal', 'Formal operational')
-    ]
-    
-    PRIMARY_MODALITY_CHOICES = [
-        ('visual', 'Visual'),
-        ('verbal', 'Verbal'),
-        ('mixed', 'Mixed')
-    ]
+    # Model now uses behavioral bands (0-4) and cognitive parameter scores (0-10)
+    # No choice constants needed for the new system
     
     # One-to-one relationship with Learner
     learner = models.OneToOneField(
@@ -133,43 +97,53 @@ class CognitiveAssessment(models.Model):
         related_name='cognitive_assessment'
     )
     
-    # Raw answer fields
-    s2_choice = models.CharField(max_length=1, choices=S2_CHOICES)
-    s2_confidence = models.PositiveSmallIntegerField(null=True, blank=True)
+    # Question 1 - Conservation Task
+    q1_rt_band = models.PositiveSmallIntegerField(default=0)  # Reaction Time Band (0-2)
+    q1_h_band = models.PositiveSmallIntegerField(default=0)   # Hover Time Band (0-2)
+    q1_ac = models.PositiveSmallIntegerField(default=0)       # Answer Change Count (0-2+)
+    q1_correctness = models.BooleanField(default=False)       # Is answer correct
     
-    s3_rule = models.CharField(max_length=10, choices=S3_RULE_CHOICES)
-    s3_corrections = models.PositiveSmallIntegerField(default=0)
+    # Question 2 - Classification Task
+    q2_corr_band = models.PositiveSmallIntegerField(default=0)  # Corrections Band (0-2)
+    q2_idle_band = models.PositiveSmallIntegerField(default=0)  # Idle Time Band (0-2)
+    q2_t_band = models.PositiveSmallIntegerField(default=0)     # Time Band (0-2)
     
-    s4_is_correct = models.BooleanField()
-    s4_swap_count = models.PositiveSmallIntegerField(default=0)
+    # Question 3 - Seriation Task
+    q3_s_band = models.PositiveSmallIntegerField(default=0)   # Swaps Band (0-2)
+    q3_m_band = models.PositiveSmallIntegerField(default=0)   # Misplacement Band (0-2)
+    q3_tp_band = models.PositiveSmallIntegerField(default=0)  # Time to First Correct Band (0-2)
+    q3_t_band = models.PositiveSmallIntegerField(default=0)   # Total Time Band (0-2)
     
-    s5_answer = models.CharField(max_length=10, choices=S5_ANSWER_CHOICES)
-    s5_explanation = models.TextField(null=True, blank=True)
+    # Question 4 - Reversibility Task
+    q4_rt_band = models.PositiveSmallIntegerField(default=0)  # Reaction Time Band (0-2)
+    q4_h_band = models.PositiveSmallIntegerField(default=0)   # Hover Time Band (0-2)
+    q4_ac = models.PositiveSmallIntegerField(default=0)       # Answer Change Count (0-2+)
+    q4_correctness = models.BooleanField(default=False)       # Is answer correct
     
-    s6_choice = models.CharField(max_length=1, choices=S6_CHOICES)
+    # Question 5 - Hypothetical Task
+    q5_rt_band = models.PositiveSmallIntegerField(default=0)  # Reaction Time Band (0-2)
+    q5_h_band = models.PositiveSmallIntegerField(default=0)   # Hover Time Band (0-2)
+    q5_ac = models.PositiveSmallIntegerField(default=0)       # Answer Change Count (0-2+)
     
-    # Computed scores (0-100)
-    conservation_score = models.PositiveSmallIntegerField()
-    classification_score = models.PositiveSmallIntegerField() 
-    seriation_score = models.PositiveSmallIntegerField()
-    reversibility_score = models.PositiveSmallIntegerField()
-    hypothetical_thinking_score = models.PositiveSmallIntegerField()
-    piaget_construct_score = models.PositiveSmallIntegerField()
+    # Cognitive Parameters (0-10 raw scores)
+    confidence_score = models.FloatField(default=0.0)
+    working_memory_score = models.FloatField(default=0.0)
+    anxiety_score = models.FloatField(default=0.0)
+    precision_score = models.FloatField(default=0.0)
+    error_correction_ability_score = models.FloatField(default=0.0)
+    impulsivity_score = models.FloatField(default=0.0)
+    working_memory_load_handling_score = models.FloatField(default=0.0)
+    processing_speed_score = models.FloatField(default=0.0)
+    exploratory_nature_score = models.FloatField(default=0.0)
+    hypothetical_reasoning_score = models.FloatField(default=0.0)
+    logical_reasoning_score = models.FloatField(default=0.0)
+    flexibility_score = models.FloatField(default=0.0)
     
-    # Piaget stage label
-    piaget_stage = models.CharField(max_length=20, choices=PIAGET_STAGE_CHOICES)
+    # Cognitive Parameters Results (structured data for each parameter)
+    cognitive_parameters = models.JSONField(default=dict)  # Complete parameter data
     
-    # Learning style summary
-    primary_modality = models.CharField(
-        max_length=10, 
-        choices=PRIMARY_MODALITY_CHOICES, 
-        default='visual'
-    )
-    prefers_structure = models.BooleanField(default=True)
-    summary_points = models.JSONField(default=list)  # list of bullet point strings
-    
-    # Performance bands and detailed scores
-    detailed_bands_and_scores = models.JSONField(default=dict)  # stores bands and scores for each domain
+    # Final summary for parents
+    final_summary = models.TextField(default='')
     
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)
@@ -178,4 +152,4 @@ class CognitiveAssessment(models.Model):
         db_table = 'cognitive_assessments'
     
     def __str__(self):
-        return f"Cognitive Assessment for {self.learner.name} - {self.piaget_stage}"
+        return f"Cognitive Assessment for {self.learner.name} - {self.created_at.strftime('%Y-%m-%d')}"

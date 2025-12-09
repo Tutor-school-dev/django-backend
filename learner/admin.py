@@ -40,29 +40,23 @@ from .models import CognitiveAssessment
 @admin.register(CognitiveAssessment)
 class CognitiveAssessmentAdmin(admin.ModelAdmin):
     """
-    Cognitive Assessment Results
+    Cognitive Assessment Results - New 12-Parameter System
     
-    Shows how well learners think and solve problems across 5 key areas:
-    • Conservation - Understanding amounts stay the same
-    • Classification - Grouping things that belong together
-    • Seriation - Putting things in order
-    • Reversibility - Understanding things can be undone
-    • Hypothetical Thinking - Imagining "what if" situations
+    Measures cognitive abilities through behavioral analysis across 12 parameters:
+    • Confidence, Working Memory, Anxiety, Precision
+    • Error Correction, Impulsivity, Processing Speed
+    • Exploratory Nature, Hypothetical & Logical Reasoning
+    • Working Memory Load Handling, Flexibility
     """
     
     # Display key info in the list view
     list_display = [
         'learner_name_and_email',
-        'piaget_stage_display',
-        'overall_score_display',
-        'learning_style_summary',
+        'top_parameters_display',
         'assessment_completion_date',
     ]
 
     list_filter = [
-        'piaget_stage',
-        'primary_modality', 
-        'prefers_structure',
         'created_at',
     ]
 
@@ -75,7 +69,7 @@ class CognitiveAssessmentAdmin(admin.ModelAdmin):
         'id',
         'created_at',
         'assessment_summary',
-        'detailed_scores',
+        'parameter_scores_display',
     ]
 
     fieldsets = (
@@ -88,60 +82,61 @@ class CognitiveAssessmentAdmin(admin.ModelAdmin):
             ),
             'description': 'Basic information about this cognitive assessment completion.'
         }),
-        ('Screen 2: Conservation Task', {
+        ('Question 1: Conservation Behavioral Data', {
             'fields': (
-                's2_choice',
-                's2_confidence',
+                'q1_rt_band',
+                'q1_h_band',
+                'q1_ac',
+                'q1_correctness',
             ),
-            'description': 'Tests understanding that quantity remains constant despite changes in appearance. Choice C indicates correct conservation understanding.'
+            'description': 'Behavioral bands from conservation task: reaction time, hover time, answer changes, correctness.'
         }),
-        ('Screen 3: Classification Task', {
+        ('Question 2: Classification Behavioral Data', {
             'fields': (
-                's3_rule',
-                's3_corrections',
+                'q2_corr_band',
+                'q2_idle_band',
+                'q2_t_band',
             ),
-            'description': 'Evaluates ability to group objects by shared characteristics (shape, color, or mixed rules). Fewer corrections indicate better classification skills.'
+            'description': 'Behavioral bands from classification task: corrections, idle time, total time.'
         }),
-        ('Screen 4: Seriation Task', {
+        ('Question 3: Seriation Behavioral Data', {
             'fields': (
-                's4_is_correct',
-                's4_swap_count',
+                'q3_s_band',
+                'q3_m_band',
+                'q3_tp_band',
+                'q3_t_band',
             ),
-            'description': 'Tests ability to arrange objects in logical sequence. Lower swap counts with correct answers indicate stronger seriation skills.'
+            'description': 'Behavioral bands from seriation task: swaps, misplacements, time to first correct, total time.'
         }),
-        ('Screen 5: Reversibility Task', {
+        ('Question 4: Reversibility Behavioral Data', {
             'fields': (
-                's5_answer',
-                's5_explanation',
+                'q4_rt_band',
+                'q4_h_band',
+                'q4_ac',
+                'q4_correctness',
             ),
-            'description': 'Assesses understanding that mental operations can be undone or reversed. "Yes" answers typically indicate mature reversibility thinking.'
+            'description': 'Behavioral bands from reversibility task: reaction time, hover time, answer changes, correctness.'
         }),
-        ('Screen 6: Hypothetical Thinking', {
+        ('Question 5: Hypothetical Behavioral Data', {
             'fields': (
-                's6_choice',
+                'q5_rt_band',
+                'q5_h_band',
+                'q5_ac',
             ),
-            'description': 'Evaluates ability to reason about abstract "what if" scenarios. Choice D typically indicates strongest hypothetical reasoning.'
+            'description': 'Behavioral bands from hypothetical task: reaction time, hover time, answer changes.'
         }),
-        ('Cognitive Domain Scores (0-100)', {
+        ('Cognitive Parameter Scores', {
             'fields': (
-                'detailed_scores',
+                'parameter_scores_display',
             ),
-            'description': 'Computed scores for each cognitive domain based on the learner\'s responses. Higher scores indicate stronger abilities in that domain.'
+            'description': '12 cognitive parameters derived from behavioral analysis.'
         }),
-        ('Performance Bands & Analysis', {
+        ('Assessment Results', {
             'fields': (
-                'detailed_bands_and_scores',
+                'cognitive_parameters',
+                'final_summary',
             ),
-            'description': 'Detailed performance bands (1-5) and scores for each cognitive domain, stored as structured data for analysis and reporting.'
-        }),
-        ('Piaget Stage & Learning Profile', {
-            'fields': (
-                'piaget_stage',
-                'primary_modality',
-                'prefers_structure', 
-                'summary_points',
-            ),
-            'description': 'Overall developmental stage classification and personalized learning recommendations based on assessment results.'
+            'description': 'Complete cognitive parameters structure and parent-friendly summary.'
         }),
     )
 
@@ -153,39 +148,20 @@ class CognitiveAssessmentAdmin(admin.ModelAdmin):
     learner_name_and_email.short_description = "Learner"
     learner_name_and_email.admin_order_field = "learner__name"
     
-    def piaget_stage_display(self, obj):
-        """Display Piaget stage with color coding"""
-        stage_colors = {
-            'preoperational': '🔴',
-            'concrete': '🟡', 
-            'transition_formal': '🟠',
-            'formal': '🟢'
-        }
-        color = stage_colors.get(obj.piaget_stage, '')
-        return f"{color} {obj.get_piaget_stage_display()}"
-    piaget_stage_display.short_description = "Piaget Stage"
-    piaget_stage_display.admin_order_field = "piaget_stage"
-    
-    def overall_score_display(self, obj):
-        """Display overall construct score with performance indicator"""
-        score = obj.piaget_construct_score
-        if score >= 80:
-            indicator = "🟢 Excellent"
-        elif score >= 65:
-            indicator = "🟡 Good" 
-        elif score >= 40:
-            indicator = "🟠 Developing"
-        else:
-            indicator = "🔴 Emerging"
-        return f"{score}/100 {indicator}"
-    overall_score_display.short_description = "Overall Score"
-    overall_score_display.admin_order_field = "piaget_construct_score"
-    
-    def learning_style_summary(self, obj):
-        """Display key learning style preferences"""
-        structure = "Structured" if obj.prefers_structure else "Flexible"
-        return f"{obj.primary_modality.title()}, {structure}"
-    learning_style_summary.short_description = "Learning Style"
+    def top_parameters_display(self, obj):
+        """Display top cognitive parameters"""
+        if not obj.cognitive_parameters:
+            return "No data"
+        
+        # Get top 3 parameters by final_score
+        params = []
+        for param_name, param_data in obj.cognitive_parameters.items():
+            if param_name != 'final_summary':
+                params.append((param_name, param_data.get('final_score', 0)))
+        
+        top_params = sorted(params, key=lambda x: x[1], reverse=True)[:3]
+        return " | ".join([f"{name.replace('_', ' ').title()}: {score}" for name, score in top_params])
+    top_parameters_display.short_description = "Top Parameters"
     
     def assessment_completion_date(self, obj):
         """Display when the assessment was completed"""
@@ -195,55 +171,30 @@ class CognitiveAssessmentAdmin(admin.ModelAdmin):
     
     def assessment_summary(self, obj):
         """Simple summary of learner's cognitive abilities"""
-        
-        # Get performance level description
-        score = obj.piaget_construct_score
-        if score >= 75:
-            level = "Advanced thinking skills"
-        elif score >= 60:
-            level = "Good thinking skills"
-        elif score >= 40:
-            level = "Developing thinking skills"
-        else:
-            level = "Early thinking skills"
-            
-        # Get strongest and weakest areas
-        scores = {
-            'Conservation': obj.conservation_score,
-            'Classification': obj.classification_score, 
-            'Seriation': obj.seriation_score,
-            'Reversibility': obj.reversibility_score,
-            'Hypothetical Thinking': obj.hypothetical_thinking_score
-        }
-        
-        strongest = max(scores, key=scores.get)
-        weakest = min(scores, key=scores.get)
-        
-        return f"""
-        📊 Overall: {score}/100 - {level}
-        🎯 Cognitive Stage: {obj.get_piaget_stage_display()}
-        
-        💪 Strongest Area: {strongest} ({scores[strongest]}/100)
-        📈 Growing Area: {weakest} ({scores[weakest]}/100)
-        
-        🎨 Learning Style: {obj.primary_modality.title()} learner, {'structured' if obj.prefers_structure else 'flexible'} approach
-        """
-    assessment_summary.short_description = "Quick Summary"
+        if obj.final_summary:
+            return obj.final_summary
+        return "Assessment data not available"
+    assessment_summary.short_description = "Parent Summary"
     
-    def detailed_scores(self, obj):
-        """Show scores for each thinking skill area"""
+    def parameter_scores_display(self, obj):
+        """Show all 12 cognitive parameter scores"""
+        if not obj.cognitive_parameters:
+            return "No parameter data available"
         
-        def get_level(score):
-            if score >= 80: return "🟢 Strong"
-            elif score >= 60: return "🟡 Good"
-            elif score >= 40: return "🟠 Fair"
-            else: return "🔴 Developing"
+        def get_level_emoji(score):
+            if score >= 80: return "🟢"
+            elif score >= 60: return "🟡"
+            elif score >= 40: return "🟠"
+            else: return "🔴"
             
-        return f"""
-        Conservation (understanding amounts): {obj.conservation_score}/100 {get_level(obj.conservation_score)}
-        Classification (grouping things): {obj.classification_score}/100 {get_level(obj.classification_score)}
-        Seriation (putting in order): {obj.seriation_score}/100 {get_level(obj.seriation_score)}
-        Reversibility (undoing actions): {obj.reversibility_score}/100 {get_level(obj.reversibility_score)}
-        Hypothetical Thinking (what if): {obj.hypothetical_thinking_score}/100 {get_level(obj.hypothetical_thinking_score)}
-        """
-    detailed_scores.short_description = "Thinking Skills Breakdown"
+        result = []
+        for param_name, param_data in obj.cognitive_parameters.items():
+            if param_name != 'final_summary':
+                score = param_data.get('final_score', 0)
+                band = param_data.get('band', 'N/A')
+                emoji = get_level_emoji(score)
+                display_name = param_name.replace('_', ' ').title()
+                result.append(f"{emoji} {display_name}: {score} ({band})")
+        
+        return "\n".join(result)
+    parameter_scores_display.short_description = "12 Cognitive Parameters"

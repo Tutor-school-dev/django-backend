@@ -139,116 +139,143 @@ class LearnerSerializer(serializers.ModelSerializer):
 
 
 class CognitiveAssessmentInputSerializer(serializers.Serializer):
-    """Serializer for cognitive assessment input from frontend"""
+    """Serializer for cognitive assessment input with new behavioral band format"""
     
-    # Screen 2 - Conservation
-    s2 = serializers.DictField(required=True)
+    # Question 1 - Conservation
+    question1_conservation = serializers.DictField(required=True)
     
-    # Screen 3 - Classification 
-    s3 = serializers.DictField(required=True)
+    # Question 2 - Classification
+    question2_classification = serializers.DictField(required=True)
     
-    # Screen 4 - Seriation
-    s4 = serializers.DictField(required=True)
+    # Question 3 - Seriation
+    question3_seriation = serializers.DictField(required=True)
     
-    # Screen 5 - Reversibility
-    s5 = serializers.DictField(required=True)
+    # Question 4 - Reversibility
+    question4_reversibility = serializers.DictField(required=True)
     
-    # Screen 6 - Hypothetical Thinking
-    s6 = serializers.DictField(required=True)
+    # Question 5 - Hypothetical Thinking
+    question5_hypothetical = serializers.DictField(required=True)
     
-    def validate_s2(self, value):
-        """Validate screen 2 data"""
-        if 'choice' not in value:
-            raise serializers.ValidationError("Missing 'choice' field in s2")
+    def validate_question1_conservation(self, value):
+        """Validate question 1 behavioral bands"""
+        required_fields = ['rt_band', 'h_band', 'ac', 'correctness']
+        for field in required_fields:
+            if field not in value:
+                raise serializers.ValidationError(f"Missing '{field}' field in question1_conservation")
         
-        choice = value['choice']
-        if choice not in ['A', 'B', 'C']:
-            raise serializers.ValidationError("s2.choice must be 'A', 'B', or 'C'")
+        # Validate band values (0-4 for bands, 0-1 for ac, boolean for correctness)
+        rt_band = value['rt_band']
+        h_band = value['h_band']
+        if not (0 <= rt_band <= 4) or not (0 <= h_band <= 4):
+            raise serializers.ValidationError("Band values must be between 0-4")
         
-        # Confidence is optional but should be a number if present
-        if 'confidence' in value and value['confidence'] is not None:
-            try:
-                confidence = int(value['confidence'])
-                if confidence < 0 or confidence > 100:
-                    raise serializers.ValidationError("s2.confidence must be between 0 and 100")
-            except (ValueError, TypeError):
-                raise serializers.ValidationError("s2.confidence must be a number")
+        ac = value['ac']
+        if not (0 <= ac <= 1):
+            raise serializers.ValidationError("ac must be between 0-1")
+            
+        if not isinstance(value['correctness'], bool):
+            raise serializers.ValidationError("correctness must be boolean")
         
         return value
     
-    def validate_s3(self, value):
-        """Validate screen 3 data"""
-        if 'rule' not in value:
-            raise serializers.ValidationError("Missing 'rule' field in s3")
+    def validate_question2_classification(self, value):
+        """Validate question 2 behavioral bands"""
+        required_fields = ['corr_band', 'idle_band', 't_band']
+        for field in required_fields:
+            if field not in value:
+                raise serializers.ValidationError(f"Missing '{field}' field in question2_classification")
         
-        rule = value['rule']
-        if rule not in ['shape', 'color', 'mixed']:
-            raise serializers.ValidationError("s3.rule must be 'shape', 'color', or 'mixed'")
-        
-        if 'corrections' not in value:
-            raise serializers.ValidationError("Missing 'corrections' field in s3")
-        
-        try:
-            corrections = int(value['corrections'])
-            if corrections < 0:
-                raise serializers.ValidationError("s3.corrections must be non-negative")
-        except (ValueError, TypeError):
-            raise serializers.ValidationError("s3.corrections must be a number")
+        # All should be 0-4 band values
+        for field in required_fields:
+            band_value = value[field]
+            if not (0 <= band_value <= 4):
+                raise serializers.ValidationError(f"{field} must be between 0-4")
         
         return value
     
-    def validate_s4(self, value):
-        """Validate screen 4 data"""
-        if 'is_correct' not in value:
-            raise serializers.ValidationError("Missing 'is_correct' field in s4")
+    def validate_question3_seriation(self, value):
+        """Validate question 3 behavioral bands"""
+        required_fields = ['s_band', 'm_band', 'tp_band', 't_band']
+        for field in required_fields:
+            if field not in value:
+                raise serializers.ValidationError(f"Missing '{field}' field in question3_seriation")
         
-        if not isinstance(value['is_correct'], bool):
-            raise serializers.ValidationError("s4.is_correct must be boolean")
-        
-        if 'swap_count' not in value:
-            raise serializers.ValidationError("Missing 'swap_count' field in s4")
-        
-        try:
-            swap_count = int(value['swap_count'])
-            if swap_count < 0:
-                raise serializers.ValidationError("s4.swap_count must be non-negative")
-        except (ValueError, TypeError):
-            raise serializers.ValidationError("s4.swap_count must be a number")
+        # All should be 0-4 band values
+        for field in required_fields:
+            band_value = value[field]
+            if not (0 <= band_value <= 4):
+                raise serializers.ValidationError(f"{field} must be between 0-4")
         
         return value
     
-    def validate_s5(self, value):
-        """Validate screen 5 data"""
-        if 'answer' not in value:
-            raise serializers.ValidationError("Missing 'answer' field in s5")
+    def validate_question4_reversibility(self, value):
+        """Validate question 4 behavioral bands"""
+        required_fields = ['rt_band', 'h_band', 'ac', 'correctness']
+        for field in required_fields:
+            if field not in value:
+                raise serializers.ValidationError(f"Missing '{field}' field in question4_reversibility")
         
-        answer = value['answer']
-        if answer not in ['yes', 'no', 'not_sure']:
-            raise serializers.ValidationError("s5.answer must be 'yes', 'no', or 'not_sure'")
+        # Validate band values and other fields
+        rt_band = value['rt_band']
+        h_band = value['h_band']
+        if not (0 <= rt_band <= 4) or not (0 <= h_band <= 4):
+            raise serializers.ValidationError("Band values must be between 0-4")
         
-        # Explanation is optional
+        ac = value['ac']
+        if not (0 <= ac <= 1):
+            raise serializers.ValidationError("ac must be between 0-1")
+            
+        if not isinstance(value['correctness'], bool):
+            raise serializers.ValidationError("correctness must be boolean")
+        
         return value
     
-    def validate_s6(self, value):
-        """Validate screen 6 data"""
-        if 'choice' not in value:
-            raise serializers.ValidationError("Missing 'choice' field in s6")
+    def validate_question5_hypothetical(self, value):
+        """Validate question 5 behavioral bands"""
+        required_fields = ['rt_band', 'h_band', 'ac']
+        for field in required_fields:
+            if field not in value:
+                raise serializers.ValidationError(f"Missing '{field}' field in question5_hypothetical")
         
-        choice = value['choice']
-        if choice not in ['A', 'B', 'C', 'D']:
-            raise serializers.ValidationError("s6.choice must be 'A', 'B', 'C', or 'D'")
+        # Validate band values
+        rt_band = value['rt_band']
+        h_band = value['h_band']
+        if not (0 <= rt_band <= 4) or not (0 <= h_band <= 4):
+            raise serializers.ValidationError("Band values must be between 0-4")
+        
+        ac = value['ac']
+        if not (0 <= ac <= 1):
+            raise serializers.ValidationError("ac must be between 0-1")
         
         return value
+
+
+class CognitiveParameterSerializer(serializers.Serializer):
+    """Serializer for individual cognitive parameter"""
+    raw_score = serializers.FloatField()
+    band = serializers.CharField()
+    score_range = serializers.CharField()
+    label = serializers.CharField()
+    interpretation = serializers.CharField()
+    final_score = serializers.IntegerField()
 
 
 class CognitiveAssessmentOutputSerializer(serializers.Serializer):
-    """Serializer for cognitive assessment output/results"""
+    """Serializer for cognitive assessment output with 11 parameters"""
     
-    conservation_score = serializers.IntegerField()
-    classification_score = serializers.IntegerField()
-    seriation_score = serializers.IntegerField()
-    reversibility_score = serializers.IntegerField()
-    hypothetical_thinking_score = serializers.IntegerField()
-    piaget_construct_score = serializers.IntegerField()
-    piaget_stage = serializers.CharField()
-    summary_points = serializers.ListField(child=serializers.CharField())
+    # 11 Cognitive Parameters
+    confidence = CognitiveParameterSerializer()
+    working_memory = CognitiveParameterSerializer()
+    anxiety = CognitiveParameterSerializer()
+    precision = CognitiveParameterSerializer()
+    error_correction_ability = CognitiveParameterSerializer()
+    impulsivity = CognitiveParameterSerializer()
+    working_memory_load_handling = CognitiveParameterSerializer()
+    processing_speed = CognitiveParameterSerializer()
+    exploratory_nature = CognitiveParameterSerializer()
+    hypothetical_reasoning = CognitiveParameterSerializer()
+    logical_reasoning = CognitiveParameterSerializer()
+    flexibility = CognitiveParameterSerializer()
+    
+    # Final summary
+    final_summary = serializers.CharField()

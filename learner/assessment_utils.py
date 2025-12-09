@@ -1,462 +1,320 @@
 """
-Cognitive Assessment Scoring Utilities with Granular 0-100 Performance Bands
+New Cognitive Assessment Scoring System - 9 Parameter Analysis
 """
 from .models import CognitiveAssessment
-import re
 
 
-# Scoring Constants for Maintainability
-class ScoringConstants:
-    """Constants for cognitive assessment scoring"""
-    
-    # Conservation Scoring
-    CONSERVATION_CORRECT_BASE = (70, 85)  # Range for choice 'C'
-    CONSERVATION_INCORRECT_BASE = {
-        'A': (25, 35),  # Appearance-based (volume focus)
-        'B': (30, 40),  # Appearance-based (height focus)
-    }
-    
-    # Confidence adjustments
-    CONFIDENCE_HIGH_THRESHOLD = 80
-    CONFIDENCE_LOW_THRESHOLD = 40
-    CONFIDENCE_CORRECT_HIGH_BONUS = (10, 15)
-    CONFIDENCE_CORRECT_LOW_BONUS = (0, 5)
-    CONFIDENCE_INCORRECT_HIGH_PENALTY = 10
-    
-    # Classification Scoring
-    CLASSIFICATION_BASE_SCORES = {
-        'shape': (75, 85),      # Abstract/functional criteria
-        'mixed': (55, 70),      # Multiple criteria
-        'color': (35, 50),      # Single surface feature
-        'random': (0, 25)       # No discernible pattern
-    }
-    
-    CLASSIFICATION_CORRECTION_PENALTIES = {
-        (0, 1): 0,      # Good planning
-        (2, 3): 5,      # Normal trial-error
-        (4, 6): 10,     # Struggling with concept
-        (7, 10): 15,    # Significant difficulty
-        (11, float('inf')): 20  # Fundamental confusion
-    }
-    
-    # Seriation Scoring
-    SERIATION_CORRECT_SCORES = {
-        (0, 3): (85, 100),     # Efficient planning
-        (4, 7): (70, 84),      # Good strategy with adjustments
-        (8, 12): (55, 69),     # Trial-error success
-        (13, 20): (40, 54),    # Struggled but persisted
-        (21, float('inf')): (30, 39)  # Correct by chance
-    }
-    
-    SERIATION_INCORRECT_SCORES = {
-        (0, 8): (25, 35),      # Gave up early
-        (9, 15): (15, 24),     # Tried but lacks reasoning
-        (16, float('inf')): (0, 14)  # Random attempts
-    }
-    
-    # Reversibility Scoring
-    REVERSIBILITY_SCORES = {
-        'yes': (75, 85),       # Strong reversibility understanding
-        'not_sure': (45, 60),  # Emerging understanding
-        'no': (20, 35)         # Limited reversibility
-    }
-    
-    # Hypothetical Thinking Scoring
-    HYPOTHETICAL_SCORES = {
-        'D': (85, 95),         # Strong abstract reasoning
-        'B': (65, 78),         # Moderate hypothetical thinking
-        'A': (38, 52),         # Concrete-bound thinking
-        'C': (18, 32),         # Rejects hypothetical premise
-        'other': (0, 15)       # No hypothetical reasoning
-    }
-    
-    # Performance Bands
-    PERFORMANCE_BANDS = [
-        (0, 20),    # Band 1: Emerging
-        (21, 40),   # Band 2: Developing
-        (41, 60),   # Band 3: Progressing
-        (61, 80),   # Band 4: Proficient
-        (81, 100)   # Band 5: Advanced
+class CognitiveScoring:    
+    # Band mapping for 0-10 scores to B1-B5
+    BAND_MAPPING = [
+        {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+         "interpretation": "Needs intensive scaffolding, highly concrete, step-by-step", "final_score": 10},
+        {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+         "interpretation": "Can perform with support, inconsistent performance", "final_score": 30},
+        {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+         "interpretation": "Basic competence, still needs some structure / examples", "final_score": 50},
+        {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+         "interpretation": "Can learn with standard instruction, light scaffolding", "final_score": 70},
+        {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+         "interpretation": "Ready for challenge, independence, higher abstraction", "final_score": 90}
     ]
     
-    # Piaget Stage Thresholds
-    PIAGET_THRESHOLDS = {
-        (0, 30): 'preoperational',
-        (31, 55): 'concrete',
-        (56, 75): 'transition_formal',
-        (76, 100): 'formal'
-    }
+    @staticmethod
+    def get_band_info(raw_score):
+        """Convert 0-10 raw score to band information"""
+        for band_info in CognitiveScoring.BAND_MAPPING:
+            min_score, max_score = band_info["range"]
+            if min_score <= raw_score <= max_score:
+                return band_info
+        # Fallback for edge cases
+        return CognitiveScoring.BAND_MAPPING[0] if raw_score < 2.1 else CognitiveScoring.BAND_MAPPING[-1]
     
-    # Overall Score Weights
-    PIAGET_WEIGHTS = {
-        'conservation': 1.0,
-        'classification': 1.0,
-        'seriation': 1.0,
-        'reversibility': 1.0,
-        'hypothetical_thinking': 1.2
-    }
-
-
-def clamp_score(score: float) -> int:
-    """Clamp score to 0-100 range and return as integer"""
-    return max(0, min(100, int(round(score))))
-
-
-def get_performance_band(score: int) -> int:
-    """Get performance band (1-5) for a given score"""
-    for band_num, (min_score, max_score) in enumerate(ScoringConstants.PERFORMANCE_BANDS, 1):
-        if min_score <= score <= max_score:
-            return band_num
-    return 1  # Fallback to lowest band
-
-
-def calculate_conservation_score(choice: str, confidence: int = None) -> int:
-    """Calculate conservation score with granular 0-100 range"""
+    @staticmethod
+    def clamp_score(score):
+        """Clamp score to 0-10 range"""
+        return max(0, min(10, score))
     
-    if choice == 'C':  # Correct conservation understanding
-        base_min, base_max = ScoringConstants.CONSERVATION_CORRECT_BASE
-        base_score = (base_min + base_max) / 2
+    # Question-specific scoring functions
+    @staticmethod
+    def calculate_q1_scores(rt_band, h_band, ac, correctness):
+        """Question 1 - Conservation Task scoring"""
+        confidence = CognitiveScoring.clamp_score(10 - (0.4 * h_band) - (0.3 * ac) - (0.3 * rt_band))
+        anxiety = CognitiveScoring.clamp_score((0.5 * h_band * 3) + (0.3 * ac * 2) + (0.2 * rt_band * 3))
+        impulsivity = CognitiveScoring.clamp_score((0 if correctness else 1) * 5 + (5 if rt_band == 0 else 0))
+        processing_speed = CognitiveScoring.clamp_score(10 - (rt_band * 4))
         
-        # Adjust for confidence
-        if confidence is not None:
-            if confidence >= ScoringConstants.CONFIDENCE_HIGH_THRESHOLD:
-                # High confidence with correct answer shows mastery
-                bonus_min, bonus_max = ScoringConstants.CONFIDENCE_CORRECT_HIGH_BONUS
-                base_score += (bonus_min + bonus_max) / 2
-            elif confidence < ScoringConstants.CONFIDENCE_LOW_THRESHOLD:
-                # Low confidence with correct answer shows uncertainty
-                bonus_min, bonus_max = ScoringConstants.CONFIDENCE_CORRECT_LOW_BONUS
-                base_score += (bonus_min + bonus_max) / 2
-    else:
-        # Incorrect answers - appearance-based thinking
-        base_range = ScoringConstants.CONSERVATION_INCORRECT_BASE.get(choice, (20, 30))
-        base_min, base_max = base_range
-        base_score = (base_min + base_max) / 2
+        return {
+            'confidence': confidence,
+            'anxiety': anxiety,
+            'impulsivity': impulsivity,
+            'processing_speed': processing_speed
+        }
+    
+    @staticmethod
+    def calculate_q2_scores(corr_band, idle_band, t_band):
+        """Question 2 - Classification Task scoring"""
+        working_memory = CognitiveScoring.clamp_score(10 - (0.5 * corr_band) - (0.5 * idle_band))
+        precision = CognitiveScoring.clamp_score(10 - (0.5 * corr_band) - (0.2 * idle_band))
+        exploration = CognitiveScoring.clamp_score((corr_band * 3) + (idle_band * 2))
+        processing_speed = CognitiveScoring.clamp_score(10 - (t_band * 3))
         
-        # Adjust for confidence
-        if confidence is not None and confidence >= ScoringConstants.CONFIDENCE_HIGH_THRESHOLD:
-            # High confidence with wrong answer shows strong perceptual bias
-            base_score -= ScoringConstants.CONFIDENCE_INCORRECT_HIGH_PENALTY
+        return {
+            'working_memory': working_memory,
+            'precision': precision,
+            'exploratory_nature': exploration,
+            'processing_speed': processing_speed
+        }
     
-    return clamp_score(base_score)
-
-
-def calculate_classification_score(rule: str, corrections: int) -> int:
-    """Calculate classification score with granular 0-100 range"""
-    
-    # Base score from rule complexity
-    base_range = ScoringConstants.CLASSIFICATION_BASE_SCORES.get(rule, (0, 25))
-    base_min, base_max = base_range
-    base_score = (base_min + base_max) / 2
-    
-    # Apply correction penalties
-    penalty = 0
-    for (min_corr, max_corr), pen in ScoringConstants.CLASSIFICATION_CORRECTION_PENALTIES.items():
-        if min_corr <= corrections <= max_corr:
-            penalty = pen
-            break
-    
-    final_score = base_score - penalty
-    return clamp_score(final_score)
-
-
-def calculate_seriation_score(is_correct: bool, swap_count: int) -> int:
-    """Calculate seriation score combining outcome and process efficiency"""
-    
-    if is_correct:
-        # Find appropriate score range based on swap count
-        for (min_swaps, max_swaps), (score_min, score_max) in ScoringConstants.SERIATION_CORRECT_SCORES.items():
-            if min_swaps <= swap_count <= max_swaps:
-                base_score = (score_min + score_max) / 2
-                return clamp_score(base_score)
-    else:
-        # Incorrect ordering
-        for (min_swaps, max_swaps), (score_min, score_max) in ScoringConstants.SERIATION_INCORRECT_SCORES.items():
-            if min_swaps <= swap_count <= max_swaps:
-                base_score = (score_min + score_max) / 2
-                return clamp_score(base_score)
-    
-    # Fallback
-    return clamp_score(20)
-
-
-def calculate_reversibility_score(answer: str, explanation: str = None) -> int:
-    """Calculate reversibility score with explanation analysis"""
-    
-    # Base score from answer
-    base_range = ScoringConstants.REVERSIBILITY_SCORES.get(answer, (10, 25))
-    base_min, base_max = base_range
-    base_score = (base_min + base_max) / 2
-    
-    # Analyze explanation if provided
-    if explanation:
-        explanation_lower = explanation.lower()
+    @staticmethod
+    def calculate_q3_scores(s_band, m_band, tp_band, t_band):
+        """Question 3 - Seriation Task scoring"""
+        load_handling = CognitiveScoring.clamp_score(10 - (0.4 * m_band) - (0.3 * s_band) - (0.3 * tp_band))
+        precision = CognitiveScoring.clamp_score(10 - (0.5 * m_band) - (0.3 * s_band))
+        error_correction = CognitiveScoring.clamp_score(10 - (0.6 * m_band) - (0.4 * s_band))
+        impulsivity = CognitiveScoring.clamp_score((5 if tp_band == 0 else 0) + (3 if s_band == 2 else 0))
+        processing_speed = CognitiveScoring.clamp_score(10 - (t_band * 3))
         
-        # Positive indicators in explanation
-        positive_keywords = [
-            'undo', 'reverse', 'back', 'opposite', 'cancel',
-            'return', 'restore', 'original', 'same as before'
-        ]
+        return {
+            'working_memory_load_handling': load_handling,
+            'precision': precision,
+            'error_correction_ability': error_correction,
+            'impulsivity': impulsivity,
+            'processing_speed': processing_speed
+        }
+    
+    @staticmethod
+    def calculate_q4_scores(rt_band, h_band, ac, correctness):
+        """Question 4 - Reversibility Task scoring"""
+        confidence = CognitiveScoring.clamp_score(10 - (0.4 * h_band) - (0.3 * ac) - (0.3 * rt_band))
+        anxiety = CognitiveScoring.clamp_score((0.5 * h_band * 3) + (0.3 * ac * 3) + (0.2 * rt_band * 2))
+        reasoning = CognitiveScoring.clamp_score((8 if correctness else 4) - rt_band - (h_band * 0.5))
+        processing_speed = CognitiveScoring.clamp_score(10 - (rt_band * 3))
         
-        negative_keywords = [
-            'permanent', 'forever', 'cant', "can't", 'impossible',
-            'never', 'always', 'stuck'
-        ]
+        return {
+            'confidence': confidence,
+            'anxiety': anxiety,
+            'logical_reasoning': reasoning,
+            'processing_speed': processing_speed
+        }
+    
+    @staticmethod
+    def calculate_q5_scores(rt_band, h_band, ac):
+        """Question 5 - Hypothetical Thinking Task scoring"""
+        hypothetical_reasoning = CognitiveScoring.clamp_score(10 - (0.4 * rt_band) - (0.4 * h_band) - (0.2 * ac))
+        flexibility = CognitiveScoring.clamp_score(10 - (0.5 * h_band * 2) - (ac * 2))
+        confidence = CognitiveScoring.clamp_score(10 - (0.3 * h_band) - (0.3 * ac) - (0.4 * rt_band))
+        processing_speed = CognitiveScoring.clamp_score(10 - (rt_band * 2.5))
         
-        positive_count = sum(1 for keyword in positive_keywords if keyword in explanation_lower)
-        negative_count = sum(1 for keyword in negative_keywords if keyword in explanation_lower)
-        
-        # Adjust score based on explanation quality
-        if positive_count > negative_count:
-            base_score += 5  # Good understanding in explanation
-        elif negative_count > positive_count:
-            base_score -= 5  # Shows misconceptions
-    
-    return clamp_score(base_score)
-
-
-def calculate_hypothetical_thinking_score(choice: str) -> int:
-    """Calculate hypothetical thinking score"""
-    
-    score_range = ScoringConstants.HYPOTHETICAL_SCORES.get(choice, ScoringConstants.HYPOTHETICAL_SCORES['other'])
-    score_min, score_max = score_range
-    base_score = (score_min + score_max) / 2
-    
-    return clamp_score(base_score)
-
-
-def generate_granular_summary_points(scores_dict: dict, bands_dict: dict) -> list:
-    """Generate detailed, granular summary points based on specific performance patterns"""
-    
-    points = []
-    
-    # Conservation-specific insights
-    conservation_score = scores_dict['conservation']
-    conservation_band = bands_dict['conservation']
-    
-    if conservation_band >= 4:
-        points.append("Demonstrates solid understanding of conservation principles")
-    elif conservation_band == 3:
-        points.append("Shows emerging conservation understanding with some inconsistencies")
-    else:
-        points.append("Tends to focus on perceptual appearance rather than underlying quantities")
-    
-    # Classification insights
-    classification_score = scores_dict['classification']
-    classification_band = bands_dict['classification']
-    
-    if classification_band >= 4:
-        points.append("Excels at pattern recognition and multi-criteria categorization")
-    elif classification_band == 3:
-        points.append("Can group objects but may need support with complex criteria")
-    else:
-        points.append("Works best with single, obvious classification features")
-    
-    # Seriation insights  
-    seriation_score = scores_dict['seriation']
-    seriation_band = bands_dict['seriation']
-    
-    if seriation_band >= 4:
-        points.append("Shows strong planning and systematic ordering abilities")
-    elif seriation_band == 3:
-        points.append("Can create sequences but benefits from scaffolding for complex tasks")
-    else:
-        points.append("Learns sequencing best through hands-on trial and error")
-    
-    # Reversibility insights
-    reversibility_score = scores_dict['reversibility']
-    reversibility_band = bands_dict['reversibility']
-    
-    if reversibility_band >= 4:
-        points.append("Routinely uses mental reversal as a problem-solving strategy")
-    elif reversibility_band == 3:
-        points.append("Understanding reversibility in familiar contexts, expanding to new areas")
-    else:
-        points.append("Benefits from concrete demonstrations of 'do-undo' operations")
-    
-    # Hypothetical thinking insights
-    hypothetical_score = scores_dict['hypothetical_thinking']
-    hypothetical_band = bands_dict['hypothetical_thinking']
-    
-    if hypothetical_band >= 4:
-        points.append("Enjoys abstract scenarios and 'what-if' thinking exercises")
-    elif hypothetical_band == 3:
-        points.append("Handles simple hypotheticals best when connected to real experiences")
-    else:
-        points.append("Learns best through concrete, hands-on experiences before abstractions")
-    
-    # Learning style preferences based on score patterns
-    structure_preference = seriation_score >= hypothetical_score
-    if structure_preference:
-        points.append("Thrives with structured, step-by-step learning progressions")
-    else:
-        points.append("Benefits from flexible, discovery-based learning approaches")
-    
-    # Overall cognitive profile
-    avg_score = sum(scores_dict.values()) / len(scores_dict)
-    if avg_score >= 75:
-        points.append("Ready for advanced abstract concepts and independent reasoning tasks")
-    elif avg_score >= 50:
-        points.append("Developing strong cognitive foundations, ready for moderate challenges")
-    else:
-        points.append("Benefits from concrete, supportive learning environments with clear examples")
-    
-    return points
+        return {
+            'hypothetical_reasoning': hypothetical_reasoning,
+            'flexibility': flexibility,
+            'confidence': confidence,
+            'processing_speed': processing_speed
+        }
 
 
 def compute_scores(assessment: CognitiveAssessment, payload: dict) -> None:
     """
-    Compute granular cognitive assessment scores with 5-band performance system.
+    Compute cognitive assessment scores using new 9-parameter system.
     
     Args:
         assessment: CognitiveAssessment model instance
-        payload: Dictionary containing the raw assessment data from frontend
+        payload: Dictionary containing behavioral bands from frontend
     """
     
-    # Extract data from payload
-    s2_data = payload['s2']
-    s3_data = payload['s3']
-    s4_data = payload['s4']
-    s5_data = payload['s5']
-    s6_data = payload['s6']
+    # Extract question data from payload
+    q1_data = payload['question1_conservation']
+    q2_data = payload['question2_classification']
+    q3_data = payload['question3_seriation']
+    q4_data = payload['question4_reversibility']
+    q5_data = payload['question5_hypothetical']
     
-    # Populate raw answer fields
-    assessment.s2_choice = s2_data['choice']
-    assessment.s2_confidence = s2_data.get('confidence')
+    # Store raw behavioral data in model
+    assessment.q1_rt_band = q1_data['rt_band']
+    assessment.q1_h_band = q1_data['h_band']
+    assessment.q1_ac = q1_data['ac']
+    assessment.q1_correctness = q1_data['correctness']
     
-    assessment.s3_rule = s3_data['rule']
-    assessment.s3_corrections = s3_data['corrections']
+    assessment.q2_corr_band = q2_data['corr_band']
+    assessment.q2_idle_band = q2_data['idle_band']
+    assessment.q2_t_band = q2_data['t_band']
     
-    assessment.s4_is_correct = s4_data['is_correct']
-    assessment.s4_swap_count = s4_data['swap_count']
+    assessment.q3_s_band = q3_data['s_band']
+    assessment.q3_m_band = q3_data['m_band']
+    assessment.q3_tp_band = q3_data['tp_band']
+    assessment.q3_t_band = q3_data['t_band']
     
-    assessment.s5_answer = s5_data['answer']
-    assessment.s5_explanation = s5_data.get('explanation', '')
+    assessment.q4_rt_band = q4_data['rt_band']
+    assessment.q4_h_band = q4_data['h_band']
+    assessment.q4_ac = q4_data['ac']
+    assessment.q4_correctness = q4_data['correctness']
     
-    assessment.s6_choice = s6_data['choice']
+    assessment.q5_rt_band = q5_data['rt_band']
+    assessment.q5_h_band = q5_data['h_band']
+    assessment.q5_ac = q5_data['ac']
     
-    # Calculate granular domain scores
-    conservation_score = calculate_conservation_score(
-        s2_data['choice'], 
-        s2_data.get('confidence')
+    # Calculate scores for each question
+    q1_scores = CognitiveScoring.calculate_q1_scores(
+        q1_data['rt_band'], q1_data['h_band'], q1_data['ac'], q1_data['correctness']
+    )
+    q2_scores = CognitiveScoring.calculate_q2_scores(
+        q2_data['corr_band'], q2_data['idle_band'], q2_data['t_band']
+    )
+    q3_scores = CognitiveScoring.calculate_q3_scores(
+        q3_data['s_band'], q3_data['m_band'], q3_data['tp_band'], q3_data['t_band']
+    )
+    q4_scores = CognitiveScoring.calculate_q4_scores(
+        q4_data['rt_band'], q4_data['h_band'], q4_data['ac'], q4_data['correctness']
+    )
+    q5_scores = CognitiveScoring.calculate_q5_scores(
+        q5_data['rt_band'], q5_data['h_band'], q5_data['ac']
     )
     
-    classification_score = calculate_classification_score(
-        s3_data['rule'], 
-        s3_data['corrections']
-    )
+    # Aggregate scores across questions for each parameter
+    parameter_scores = {}
     
-    seriation_score = calculate_seriation_score(
-        s4_data['is_correct'], 
-        s4_data['swap_count']
-    )
+    # Confidence (Q1, Q4, Q5)
+    confidence_scores = [q1_scores['confidence'], q4_scores['confidence'], q5_scores['confidence']]
+    parameter_scores['confidence'] = sum(confidence_scores) / len(confidence_scores)
     
-    reversibility_score = calculate_reversibility_score(
-        s5_data['answer'], 
-        s5_data.get('explanation')
-    )
+    # Working Memory (Q2 only)
+    parameter_scores['working_memory'] = q2_scores['working_memory']
     
-    hypothetical_thinking_score = calculate_hypothetical_thinking_score(
-        s6_data['choice']
-    )
+    # Anxiety (Q1, Q4)
+    anxiety_scores = [q1_scores['anxiety'], q4_scores['anxiety']]
+    parameter_scores['anxiety'] = sum(anxiety_scores) / len(anxiety_scores)
     
-    # Calculate performance bands
-    scores_dict = {
-        'conservation': conservation_score,
-        'classification': classification_score,
-        'seriation': seriation_score,
-        'reversibility': reversibility_score,
-        'hypothetical_thinking': hypothetical_thinking_score
-    }
+    # Precision (Q2, Q3)
+    precision_scores = [q2_scores['precision'], q3_scores['precision']]
+    parameter_scores['precision'] = sum(precision_scores) / len(precision_scores)
     
-    bands_dict = {
-        domain: get_performance_band(score) 
-        for domain, score in scores_dict.items()
-    }
+    # Error Correction Ability (Q3 only)
+    parameter_scores['error_correction_ability'] = q3_scores['error_correction_ability']
     
-    # Calculate overall Piaget construct score (weighted average)
-    weights = ScoringConstants.PIAGET_WEIGHTS
-    total_weighted_score = sum(score * weights[domain] for domain, score in scores_dict.items())
-    total_weight = sum(weights.values())
-    piaget_construct_score = clamp_score(total_weighted_score / total_weight)
+    # Impulsivity (Q1, Q3)
+    impulsivity_scores = [q1_scores['impulsivity'], q3_scores['impulsivity']]
+    parameter_scores['impulsivity'] = sum(impulsivity_scores) / len(impulsivity_scores)
     
-    # Determine Piaget stage
-    piaget_stage = 'preoperational'  # Default
-    for (min_score, max_score), stage in ScoringConstants.PIAGET_THRESHOLDS.items():
-        if min_score <= piaget_construct_score <= max_score:
-            piaget_stage = stage
-            break
+    # Working Memory Load Handling (Q3 only)
+    parameter_scores['working_memory_load_handling'] = q3_scores['working_memory_load_handling']
     
-    # Determine learning preferences
-    primary_modality = 'visual'  # Default for now
-    prefers_structure = seriation_score >= hypothetical_thinking_score
+    # Processing Speed (Q1, Q2, Q3, Q4, Q5)
+    processing_speed_scores = [
+        q1_scores['processing_speed'], q2_scores['processing_speed'], 
+        q3_scores['processing_speed'], q4_scores['processing_speed'], 
+        q5_scores['processing_speed']
+    ]
+    parameter_scores['processing_speed'] = sum(processing_speed_scores) / len(processing_speed_scores)
     
-    # Generate granular summary points
-    summary_points = generate_granular_summary_points(scores_dict, bands_dict)
+    # Exploratory Nature (Q2 only)
+    parameter_scores['exploratory_nature'] = q2_scores['exploratory_nature']
     
-    # Create detailed bands and scores data
-    detailed_bands_and_scores = {}
-    for domain, score in scores_dict.items():
-        detailed_bands_and_scores[domain] = {
-            'score': score,
-            'band': bands_dict[domain]
+    # Hypothetical Reasoning (Q5 only)
+    parameter_scores['hypothetical_reasoning'] = q5_scores['hypothetical_reasoning']
+    
+    # Logical Reasoning (Q4 only)
+    parameter_scores['logical_reasoning'] = q4_scores['logical_reasoning']
+    
+    # Flexibility (Q5 only) 
+    parameter_scores['flexibility'] = q5_scores['flexibility']
+    
+    # Store raw parameter scores in model
+    assessment.confidence_score = parameter_scores['confidence']
+    assessment.working_memory_score = parameter_scores['working_memory']
+    assessment.anxiety_score = parameter_scores['anxiety']
+    assessment.precision_score = parameter_scores['precision']
+    assessment.error_correction_ability_score = parameter_scores['error_correction_ability']
+    assessment.impulsivity_score = parameter_scores['impulsivity']
+    assessment.working_memory_load_handling_score = parameter_scores['working_memory_load_handling']
+    assessment.processing_speed_score = parameter_scores['processing_speed']
+    assessment.exploratory_nature_score = parameter_scores['exploratory_nature']
+    assessment.hypothetical_reasoning_score = parameter_scores['hypothetical_reasoning']
+    assessment.logical_reasoning_score = parameter_scores['logical_reasoning']
+    assessment.flexibility_score = parameter_scores['flexibility']
+    
+    # Create cognitive parameters structure for API response
+    cognitive_parameters = {}
+    for param_name, raw_score in parameter_scores.items():
+        band_info = CognitiveScoring.get_band_info(raw_score)
+        cognitive_parameters[param_name] = {
+            'raw_score': round(raw_score, 2),
+            'band': band_info['band'],
+            'score_range': band_info['score_range'],
+            'label': band_info['label'],
+            'interpretation': band_info['interpretation'],
+            'final_score': band_info['final_score']
         }
     
-    # Add overall score and band
-    detailed_bands_and_scores['overall'] = {
-        'score': piaget_construct_score,
-        'band': get_performance_band(piaget_construct_score)
-    }
+    # Generate final summary
+    final_summary = generate_parent_summary(cognitive_parameters)
     
-    # Set all computed fields on the assessment
-    assessment.conservation_score = conservation_score
-    assessment.classification_score = classification_score
-    assessment.seriation_score = seriation_score
-    assessment.reversibility_score = reversibility_score
-    assessment.hypothetical_thinking_score = hypothetical_thinking_score
-    assessment.piaget_construct_score = piaget_construct_score
-    assessment.piaget_stage = piaget_stage
-    assessment.primary_modality = primary_modality
-    assessment.prefers_structure = prefers_structure
-    assessment.summary_points = summary_points
-    assessment.detailed_bands_and_scores = detailed_bands_and_scores
+    # Store in model
+    assessment.cognitive_parameters = cognitive_parameters
+    assessment.final_summary = final_summary
     
     # Save the assessment
     assessment.save()
 
 
-def get_assessment_bands_and_scores(assessment: CognitiveAssessment) -> dict:
+def generate_parent_summary(cognitive_parameters: dict) -> str:
+    """Generate parent-friendly summary from cognitive parameters"""
+    
+    # Extract key parameters for summary
+    working_memory = cognitive_parameters['working_memory']
+    processing_speed = cognitive_parameters['processing_speed']
+    hypothetical_reasoning = cognitive_parameters['hypothetical_reasoning']
+    logical_reasoning = cognitive_parameters['logical_reasoning']
+    
+    # Determine thinking pace
+    if processing_speed['final_score'] >= 70:
+        pace = "quick"
+    elif processing_speed['final_score'] >= 50:
+        pace = "steady"
+    else:
+        pace = "developing"
+    
+    # Determine working memory ability
+    if working_memory['final_score'] >= 70:
+        memory_ability = "well"
+    elif working_memory['final_score'] >= 50:
+        memory_ability = "moderately"
+    else:
+        memory_ability = "with support needed"
+    
+    # Determine reasoning ability (average of hypothetical and logical)
+    avg_reasoning = (hypothetical_reasoning['final_score'] + logical_reasoning['final_score']) / 2
+    if avg_reasoning >= 70:
+        reasoning_level = "strong"
+    elif avg_reasoning >= 50:
+        reasoning_level = "growing"
+    else:
+        reasoning_level = "emerging"
+    
+    # Generate summary
+    summary = f"""🧠 How Your Child Thinks:
+
+Your child understands ideas at a {pace} pace. They can hold information in mind {memory_ability} while doing a task. They show signs of {reasoning_level} reasoning when thinking about 'why' or 'what might happen' questions.
+
+This assessment shows your child's natural thinking patterns and helps us understand how they learn best."""
+    
+    return summary
+
+
+def get_assessment_response(assessment: CognitiveAssessment) -> dict:
     """
-    Get detailed bands and scores for an assessment.
+    Get complete assessment response in new format.
     
     Returns:
-        dict: Contains score and band for each cognitive parameter
+        dict: Complete cognitive assessment response
     """
     
-    # Return the stored detailed bands and scores if available
-    if assessment.detailed_bands_and_scores:
-        return assessment.detailed_bands_and_scores
+    if assessment.cognitive_parameters:
+        # Add final_summary to the response
+        response = dict(assessment.cognitive_parameters)
+        response['final_summary'] = assessment.final_summary
+        return response
     
-    # Fallback: calculate if not stored (for backward compatibility)
-    scores = {
-        'conservation': assessment.conservation_score,
-        'classification': assessment.classification_score,
-        'seriation': assessment.seriation_score,
-        'reversibility': assessment.reversibility_score,
-        'hypothetical_thinking': assessment.hypothetical_thinking_score
+    # Fallback for backward compatibility (shouldn't be needed with new system)
+    return {
+        'final_summary': 'Assessment data not available in new format.'
     }
-    
-    result = {}
-    for domain, score in scores.items():
-        result[domain] = {
-            'score': score,
-            'band': get_performance_band(score)
-        }
-    
-    # Add overall score
-    result['overall'] = {
-        'score': assessment.piaget_construct_score,
-        'band': get_performance_band(assessment.piaget_construct_score)
-    }
-    
-    return result
