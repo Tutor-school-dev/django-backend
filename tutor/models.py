@@ -98,3 +98,130 @@ class Teacher(models.Model):
         if not self.subscription_validity:
             return False
         return timezone.now() < self.subscription_validity
+
+
+class TeacherPedagogyProfile(models.Model):
+    """
+    Teacher Pedagogy Fingerprint - stores cognitive teaching traits.
+    Each trait represents how the teacher approaches different aspects of teaching.
+    """
+    
+    # Trait segment choices
+    SEGMENT_CHOICES = [
+        ('HIGH', 'High'),
+        ('LOW', 'Low'),
+    ]
+    
+    # Primary relationship
+    teacher = models.OneToOneField(
+        Teacher,
+        on_delete=models.CASCADE,
+        related_name='pedagogy_profile',
+        primary_key=True
+    )
+    
+    # Teaching Pedagogy Traits (8 binary traits)
+    
+    tcs = models.CharField(
+        max_length=4,
+        choices=SEGMENT_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Confidence Support (TCS)",
+        help_text="Measures how the teacher supports student confidence when they make errors. HIGH: Encourages and uses reflective questions. LOW: Direct or neutral corrections."
+    )
+    
+    tspi = models.CharField(
+        max_length=4,
+        choices=SEGMENT_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Speed Regulation (TSPI)",
+        help_text="Indicates the teacher's natural teaching pace and speed regulation. HIGH: Moderate to slow pace with checkpoints or adaptive speed. LOW: Fast and concise teaching."
+    )
+    
+    twmls = models.CharField(
+        max_length=4,
+        choices=SEGMENT_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Working Memory Support (TWMLS)",
+        help_text="Shows how the teacher manages cognitive load in multi-step concepts. HIGH: Breaks content into chunks or micro-steps. LOW: Explains full concepts at once or lets child attempt first."
+    )
+    
+    tpo = models.CharField(
+        max_length=4,
+        choices=SEGMENT_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Precision Focus (TPO)",
+        help_text="Reflects which types of errors the teacher prioritizes. HIGH: Focuses on conceptual and procedural errors. LOW: Focuses on accuracy or only repeated errors."
+    )
+    
+    tecp = models.CharField(
+        max_length=4,
+        choices=SEGMENT_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Error Regulation (TECP)",
+        help_text="Defines the teacher's approach to repeated student mistakes. HIGH: Re-explains, shows counterexamples, or rebuilds from basics. LOW: Allows more exploration."
+    )
+    
+    tet = models.CharField(
+        max_length=4,
+        choices=SEGMENT_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Exploration Control (TET)",
+        help_text="Measures the teacher's tolerance for student experimentation. HIGH: Prefers single methods or strict structure. LOW: Encourages or allows experimentation."
+    )
+    
+    tics = models.CharField(
+        max_length=4,
+        choices=SEGMENT_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Impulse Regulation (TICS)",
+        help_text="Shows how the teacher handles impulsive student responses. HIGH: Slows down students or asks for explanations. LOW: Lets them try first or doesn't interfere."
+    )
+    
+    trd = models.CharField(
+        max_length=4,
+        choices=SEGMENT_CHOICES,
+        null=True,
+        blank=True,
+        verbose_name="Reasoning Depth (TRD)",
+        help_text="Indicates frequency of deep reasoning questions ('why', 'what if'). HIGH: Always or often asks reasoning questions. LOW: Rarely or never asks them."
+    )
+    
+    # Metadata
+    completed_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp when the pedagogy profile was completed"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        db_table = 'teacher_pedagogy_profile'
+        verbose_name = 'Teacher Pedagogy Profile'
+        verbose_name_plural = 'Teacher Pedagogy Profiles'
+    
+    def __str__(self):
+        return f"Pedagogy Profile: {self.teacher.name}"
+    
+    def get_pedagogy_fingerprint(self):
+        """
+        Returns the complete Teacher Pedagogy Fingerprint as a dict
+        """
+        return {
+            'TCS': self.tcs,
+            'TSPI': self.tspi,
+            'TWMLS': self.twmls,
+            'TPO': self.tpo,
+            'TECP': self.tecp,
+            'TET': self.tet,
+            'TICS': self.tics,
+            'TRD': self.trd,
+        }

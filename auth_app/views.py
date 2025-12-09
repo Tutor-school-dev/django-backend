@@ -19,7 +19,7 @@ from .serializers import (
 )
 from .services import GoogleAuthService, OTPService, TokenService
 from tutor.models import Teacher
-from learner.models import Learner
+from learner.models import CognitiveAssessment, Learner
 
 
 class GoogleSignInView(APIView):
@@ -222,6 +222,19 @@ class OTPVerifyView(APIView):
                     
         # If new user, return access hash for registration completion
         if is_new_user:
+
+            # doing this for ai-demo purpose only
+            if user_type == 'learner':
+                tokens = TokenService.generate_tokens(user.id, user_type)
+                user_data = LearnerSerializer(user).data
+                return Response({
+                    'jwt_token': tokens['access'],
+                    'refresh': tokens['refresh'],
+                    'user_type': user_type,
+                    'user': user_data,
+                    'go_to_dashboard': False,
+                    'go_to_quiz': True
+                }, status=status.HTTP_200_OK)
             # Generate JWT-based access hash
             access_hash = TokenService.generate_access_hash(user.id, user_type)
             logger.info(f"Access hash generated for new {user_type}: {formatted_phone}")
@@ -240,13 +253,17 @@ class OTPVerifyView(APIView):
             user_data = TutorSerializer(user).data
         else:
             user_data = LearnerSerializer(user).data
+            existing_assessment = CognitiveAssessment.objects.filter(learner=user).last()
+            if existing_assessment:
+                user_data['cognitive_assessment_exists'] = True
 
         return Response({
             'jwt_token': tokens['access'],
             'refresh': tokens['refresh'],
             'user_type': user_type,
             'user': user_data,
-            'go_to_dashboard': True
+            'go_to_dashboard': True,
+            'go_to_quiz': False
         }, status=status.HTTP_200_OK)
 
 
