@@ -181,27 +181,39 @@ This should show detailed matching information and verify the system works end-t
 
 ### Step 1: Run Diagnostics First
 ```bash
-python manage.py diagnose_openai
+python manage.py diagnose_ai
 ```
-This will check all OpenAI configuration and show exactly what's wrong.
+This will check all AI configuration (OpenAI or Gemini) and show exactly what's wrong.
 
-### If you get "No module named 'openai'":
+### If you get AI package import errors:
 ```bash
+# For OpenAI (if GEN_AI=openai)
 pip install openai==1.58.1
+
+# For Gemini (if GEN_AI=gemini)  
+pip install google-generativeai==0.8.3
 ```
 
-### If you get "OPENAI_API_KEY not set":
+### If you get API key errors:
 1. Check your `.env` file exists in project root
-2. Add to your `.env` file:
-```
+2. Add the correct API key to your `.env` file:
+```bash
+# For OpenAI
 OPENAI_API_KEY=your_openai_key_here
+
+# For Gemini  
+GEMINI_API_KEY=your_gemini_key_here
+
+# Set which AI provider to use
+GEN_AI=gemini  # or 'openai'
 ```
 3. Restart Django server after adding the key
 
-### If you get "OpenAI service not available":
-1. Run diagnostics: `python manage.py diagnose_openai`
+### If you get "AI service not available":
+1. Run diagnostics: `python manage.py diagnose_ai`
 2. Check logs: `tail -f logs/application-logs.log`
 3. Verify API key is valid (diagnostics will test this)
+4. Check GEN_AI setting matches your available API key
 
 ### If you get database errors:
 ```bash
@@ -227,10 +239,20 @@ grep -i "openai\|matching\|error" logs/application-logs.log
 tail -f logs/error-logs.log
 ```
 
-### Test Without OpenAI (Fallback Mode):
-If OpenAI is not working, the system should automatically fall back to rule-based matching. You'll see this in the logs:
+### Switch Between AI Providers:
+You can easily switch between OpenAI and Gemini by changing the `.env` file:
+```bash
+# Use Gemini (current setting)
+GEN_AI=gemini
+
+# Use OpenAI  
+GEN_AI=openai
 ```
-WARNING - AI matching failed, using fallback: OpenAI service not available
+
+### Test Without AI (Fallback Mode):
+If AI is not working, the system automatically falls back to rule-based matching. You'll see this in the logs:
+```
+WARNING - AI matching failed, using fallback: Gemini service not available
 INFO - Switching to rule-based fallback matching
 ```
 

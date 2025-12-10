@@ -286,8 +286,17 @@ LOGGING = {
     },
 }
 
+# AI Configuration
+GEN_AI = config('GEN_AI', default='openai')  # 'openai' or 'gemini'
+
 # OpenAI Configuration
 OPENAI_API_KEY = config('OPENAI_API_KEY', default='')
 OPENAI_MODEL = config('OPENAI_MODEL', default='gpt-4o-mini')
 OPENAI_MAX_TOKENS = config('OPENAI_MAX_TOKENS', default=1000, cast=int)
-OPENAI_TIMEOUT = config('OPENAI_TIMEOUT', default=30, cast=int)  
+OPENAI_TIMEOUT = config('OPENAI_TIMEOUT', default=30, cast=int)
+
+# Gemini Configuration
+GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
+GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-2.0-flash-exp')
+GEMINI_MAX_TOKENS = config('GEMINI_MAX_TOKENS', default=1000, cast=int)
+GEMINI_TIMEOUT = config('GEMINI_TIMEOUT', default=30, cast=int)  
