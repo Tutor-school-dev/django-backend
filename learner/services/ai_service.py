@@ -68,8 +68,8 @@ class AIMatchingService:
             if api_key:
                 logger.info(f"Gemini package available, API key provided (length: {len(api_key)})")
                 genai.configure(api_key=api_key)
-                self.client = genai.GenerativeModel('gemini-2.0-flash-exp')
-                self.model = getattr(settings, 'GEMINI_MODEL', 'gemini-2.0-flash-exp')
+                self.client = genai.GenerativeModel('gemini-2.5-flash-lite')
+                self.model = getattr(settings, 'GEMINI_MODEL', 'gemini-2.5-flash-lite')
                 self.max_tokens = getattr(settings, 'GEMINI_MAX_TOKENS', 800)
                 self.timeout = getattr(settings, 'GEMINI_TIMEOUT', 30)
                 logger.info("Gemini client initialized successfully")
@@ -138,7 +138,11 @@ class AIMatchingService:
             logger.debug(f"AI response length: {len(ai_content)} characters")
             logger.debug(f"AI response preview: {ai_content[:200]}...")
             
-            result = json.loads(ai_content)
+            # Clean AI response (remove markdown code blocks if present)
+            cleaned_content = self._clean_ai_response(ai_content)
+            logger.debug(f"Cleaned response length: {len(cleaned_content)} characters")
+            
+            result = json.loads(cleaned_content)
             logger.info(f"AI response parsed successfully - found {len(result.get('matches', []))} matches")
             
             # Add metadata
@@ -155,7 +159,8 @@ class AIMatchingService:
             
         except json.JSONDecodeError as e:
             logger.error(f"Failed to parse AI response: {e}")
-            logger.error(f"AI response content: {ai_content if 'ai_content' in locals() else 'No response content'}")
+            logger.error(f"Original AI response: {ai_content if 'ai_content' in locals() else 'No original response'}")
+            logger.error(f"Cleaned AI response: {cleaned_content if 'cleaned_content' in locals() else 'No cleaned response'}")
             raise Exception("AI returned invalid response format")
         except Exception as e:
             # Handle specific AI provider errors
@@ -177,7 +182,7 @@ class AIMatchingService:
             messages=[
                 {
                     "role": "system", 
-                    "content": "You are a tutor-student matching expert. Return only valid JSON responses."
+                    "content": "You are a tutor-student matching expert. Return ONLY valid JSON - no markdown, no code blocks, no explanations. Just pure JSON."
                 },
                 {
                     "role": "user",
@@ -191,7 +196,7 @@ class AIMatchingService:
     
     def _call_gemini_api(self, prompt):
         """Call Gemini API"""
-        full_prompt = f"""You are a tutor-student matching expert. Return only valid JSON responses.
+        full_prompt = f"""You are a tutor-student matching expert. Return ONLY valid JSON - no markdown, no code blocks, no explanations. Just pure JSON.
 
 {prompt}"""
         
@@ -203,6 +208,32 @@ class AIMatchingService:
             }
         )
         return response.text.strip()
+    
+    def _clean_ai_response(self, ai_content):
+        """Clean AI response by removing markdown code blocks and extra formatting"""
+        # Remove markdown code blocks (```json ... ``` or ``` ... ```)
+        cleaned = ai_content.strip()
+        
+        # Check for markdown code blocks
+        if cleaned.startswith('```'):
+            # Find the first newline after ```
+            first_newline = cleaned.find('\n')
+            if first_newline != -1:
+                # Remove the opening ```json or ```
+                cleaned = cleaned[first_newline + 1:]
+            
+            # Remove closing ```
+            if cleaned.endswith('```'):
+                cleaned = cleaned[:-3]
+        
+        # Remove any leading/trailing whitespace
+        cleaned = cleaned.strip()
+        
+        # Log the cleaning process for debugging
+        if cleaned != ai_content.strip():
+            logger.debug("AI response contained markdown formatting - cleaned successfully")
+        
+        return cleaned
     
     def _build_matching_prompt(self, learner_profile, tutors_data):
         """Build token-optimized prompt for AI models"""
@@ -239,10 +270,12 @@ Subject matching rules:
 - Partial overlap allowed, reward close matches
 - Consider semantic similarity
 
-Return top 3 as JSON:
+IMPORTANT: Return ONLY valid JSON - no markdown blocks, no code formatting, no explanations.
+
+Required JSON format:
 {{"matches":[{{"tutor_id":"id","final_score":85,"reasoning":"High TCS matches low confidence (3). TSPI suits slow processing (2). Strong subject match.","subject_explanation":"Maths matches Mathematics expertise"}}]}}
 
-Rank by: 1)Cognitive compatibility 2)Subject overlap 3)Lower price for ties. Be concise but clear."""
+Rank by: 1)Cognitive compatibility 2)Subject overlap 3)Lower price for ties. Be concise but clear. Return top 3 matches."""
 
         return prompt
     

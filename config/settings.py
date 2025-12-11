@@ -299,4 +299,17 @@ OPENAI_TIMEOUT = config('OPENAI_TIMEOUT', default=30, cast=int)
 GEMINI_API_KEY = config('GEMINI_API_KEY', default='')
 GEMINI_MODEL = config('GEMINI_MODEL', default='gemini-2.0-flash-exp')
 GEMINI_MAX_TOKENS = config('GEMINI_MAX_TOKENS', default=1000, cast=int)
-GEMINI_TIMEOUT = config('GEMINI_TIMEOUT', default=30, cast=int)  
+GEMINI_TIMEOUT = config('GEMINI_TIMEOUT', default=30, cast=int)
+
+# Cache Configuration
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'django_cache_table',
+        'TIMEOUT': 3600,  # 1 hour default timeout
+        'OPTIONS': {
+            'MAX_ENTRIES': 1000,
+            'CULL_FREQUENCY': 3,
+        }
+    }
+}

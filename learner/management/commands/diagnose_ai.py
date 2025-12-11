@@ -128,7 +128,7 @@ class Command(BaseCommand):
         # Test Gemini client initialization
         try:
             genai.configure(api_key=api_key)
-            client = genai.GenerativeModel('gemini-2.0-flash-exp')
+            client = genai.GenerativeModel('gemini-2.5-sflash-lite')
             self.stdout.write(self.style.SUCCESS('✅ Gemini client initialized successfully'))
         except Exception as e:
             self.stdout.write(self.style.ERROR('❌ Gemini client initialization failed'))
