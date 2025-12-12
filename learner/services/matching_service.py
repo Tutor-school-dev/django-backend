@@ -130,11 +130,15 @@ class TutorMatchingService:
         learner_subjects = learner_profile['subjects']
         
         for tutor in tutors:
-            # Calculate cognitive compatibility score
-            cognitive_score = self._calculate_cognitive_score(cognitive, tutor.pedagogy_profile)
+            # Calculate cognitive compatibility score (more granular)
+            cognitive_score = self._calculate_enhanced_cognitive_score(cognitive, tutor.pedagogy_profile)
             
             # Calculate subject compatibility score  
             subject_score = self._calculate_subject_score(learner_subjects, tutor.subjects)
+            
+            # Calculate price competitiveness (0-10 scale, lower price = higher score)
+            max_price = 2000  # Assuming max reasonable price
+            price_score = max(0, 10 - (float(tutor.lesson_price) / max_price * 10))
             
             tutors_data.append({
                 'id': str(tutor.id),
@@ -143,6 +147,7 @@ class TutorMatchingService:
                 'subjects': tutor.subjects or "",
                 'cognitive_score': cognitive_score,
                 'subject_score': subject_score,
+                'price_score': price_score,
                 'pedagogy': tutor.pedagogy_profile.get_pedagogy_fingerprint()
             })
         
@@ -232,6 +237,113 @@ class TutorMatchingService:
         
         return score
     
+    def _calculate_enhanced_cognitive_score(self, cognitive, pedagogy_profile):
+        """Enhanced cognitive compatibility scoring with decimal precision"""
+        
+        total_score = 0.0
+        
+        # Confidence/Anxiety matching (weighted by strength of match)
+        conf = cognitive['confidence']
+        anx = cognitive['anxiety']
+        if conf <= 4 or anx >= 7:
+            if pedagogy_profile.tcs == 'HIGH':
+                total_score += 1.0 + (0.2 if anx >= 8 else 0.1)  # Bonus for severe cases
+            else:
+                total_score += 0.3  # Partial match
+        elif conf >= 7 and anx <= 4:
+            if pedagogy_profile.tcs == 'LOW':
+                total_score += 1.0 + (0.2 if conf >= 8 else 0.1)
+            else:
+                total_score += 0.3
+        elif 4 < conf < 7 and 4 < anx < 7:
+            if pedagogy_profile.tcs == 'HIGH':
+                total_score += 0.8
+            else:
+                total_score += 0.5
+        
+        # Processing Speed matching
+        ps = cognitive['processing_speed']
+        if ps <= 4 and pedagogy_profile.tspi == 'HIGH':
+            total_score += 1.0 + (0.2 if ps <= 2 else 0.1)
+        elif ps >= 7 and pedagogy_profile.tspi == 'LOW':
+            total_score += 1.0 + (0.2 if ps >= 8 else 0.1)
+        elif 4 < ps < 7 and pedagogy_profile.tspi == 'HIGH':
+            total_score += 0.8
+        elif 4 < ps < 7 and pedagogy_profile.tspi == 'LOW':
+            total_score += 0.5
+        
+        # Working Memory matching
+        wm = cognitive['working_memory']
+        if wm <= 4 and pedagogy_profile.twmls == 'HIGH':
+            total_score += 1.0 + (0.2 if wm <= 2 else 0.1)
+        elif wm >= 7 and pedagogy_profile.twmls == 'LOW':
+            total_score += 1.0 + (0.2 if wm >= 8 else 0.1)
+        elif 4 < wm < 7 and pedagogy_profile.twmls == 'HIGH':
+            total_score += 0.8
+        elif 4 < wm < 7 and pedagogy_profile.twmls == 'LOW':
+            total_score += 0.5
+        
+        # Precision matching
+        prec = cognitive['precision']
+        if prec <= 4 and pedagogy_profile.tpo == 'HIGH':
+            total_score += 1.0 + (0.2 if prec <= 2 else 0.1)
+        elif prec >= 7 and pedagogy_profile.tpo == 'LOW':
+            total_score += 1.0 + (0.2 if prec >= 8 else 0.1)
+        elif 4 < prec < 7 and pedagogy_profile.tpo == 'HIGH':
+            total_score += 0.8
+        elif 4 < prec < 7 and pedagogy_profile.tpo == 'LOW':
+            total_score += 0.5
+        
+        # Error Correction matching
+        ec = cognitive['error_correction']
+        if ec <= 4 and pedagogy_profile.tecp == 'HIGH':
+            total_score += 1.0 + (0.2 if ec <= 2 else 0.1)
+        elif ec >= 7 and pedagogy_profile.tecp == 'LOW':
+            total_score += 1.0 + (0.2 if ec >= 8 else 0.1)
+        elif 4 < ec < 7 and pedagogy_profile.tecp == 'HIGH':
+            total_score += 0.8
+        elif 4 < ec < 7 and pedagogy_profile.tecp == 'LOW':
+            total_score += 0.5
+        
+        # Exploration matching
+        exp = cognitive['exploration']
+        if exp >= 7 and pedagogy_profile.tet == 'LOW':
+            total_score += 1.0 + (0.2 if exp >= 8 else 0.1)
+        elif exp <= 4 and pedagogy_profile.tet == 'HIGH':
+            total_score += 1.0 + (0.2 if exp <= 2 else 0.1)
+        elif 4 < exp < 7:
+            if prec <= 4 and pedagogy_profile.tet == 'HIGH':
+                total_score += 0.8
+            elif prec > 4 and pedagogy_profile.tet == 'LOW':
+                total_score += 0.8
+            else:
+                total_score += 0.4
+        
+        # Impulsivity matching
+        imp = cognitive['impulsivity']
+        if imp >= 7 and pedagogy_profile.tics == 'HIGH':
+            total_score += 1.0 + (0.2 if imp >= 8 else 0.1)
+        elif imp <= 4 and pedagogy_profile.tics == 'LOW':
+            total_score += 1.0 + (0.2 if imp <= 2 else 0.1)
+        elif 4 < imp < 7 and pedagogy_profile.tics == 'HIGH':
+            total_score += 0.8
+        elif 4 < imp < 7 and pedagogy_profile.tics == 'LOW':
+            total_score += 0.5
+        
+        # Reasoning matching (composite of logical + hypothetical)
+        reasoning = (cognitive['logical_reasoning'] + cognitive['hypothetical_reasoning']) / 2
+        if reasoning >= 7 and pedagogy_profile.trd == 'HIGH':
+            total_score += 1.0 + (0.2 if reasoning >= 8 else 0.1)
+        elif reasoning <= 4 and pedagogy_profile.trd == 'LOW':
+            total_score += 1.0 + (0.2 if reasoning <= 2 else 0.1)
+        elif 4 < reasoning < 7 and pedagogy_profile.trd == 'HIGH':
+            total_score += 0.8
+        elif 4 < reasoning < 7 and pedagogy_profile.trd == 'LOW':
+            total_score += 0.5
+        
+        # Return score with 1 decimal precision, max 10.0
+        return round(min(total_score, 10.0), 1)
+    
     def _calculate_subject_score(self, learner_subjects, tutor_subjects_str):
         """Calculate subject compatibility score (basic overlap check)"""
         
@@ -260,10 +372,16 @@ class TutorMatchingService:
         
         logger.info("Using rule-based fallback matching algorithm")
         
-        # Sort by cognitive score, then subject score, then price
+        import random
+        
+        # Add small random factor to break ties and create variation
+        for tutor in tutors_data:
+            tutor['random_factor'] = random.random() * 0.5  # 0.0-0.5 bonus
+            
+        # Sort by cognitive score, then subject score, then random factor, then price
         sorted_tutors = sorted(
             tutors_data,
-            key=lambda t: (-t['cognitive_score'], -t['subject_score'], t['price'])
+            key=lambda t: (-t['cognitive_score'], -t['subject_score'], -t['random_factor'], t['price'])
         )
         
         logger.debug(f"Fallback ranking: {[(t['name'], t['cognitive_score'], t['subject_score']) for t in sorted_tutors[:3]]}")

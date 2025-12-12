@@ -5,29 +5,168 @@ from .models import CognitiveAssessment
 
 
 class CognitiveScoring:    
-    # Band mapping for 0-10 scores to B1-B5
-    BAND_MAPPING = [
-        {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
-         "interpretation": "Needs intensive scaffolding, highly concrete, step-by-step", "final_score": 10},
-        {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
-         "interpretation": "Can perform with support, inconsistent performance", "final_score": 30},
-        {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
-         "interpretation": "Basic competence, still needs some structure / examples", "final_score": 50},
-        {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
-         "interpretation": "Can learn with standard instruction, light scaffolding", "final_score": 70},
-        {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
-         "interpretation": "Ready for challenge, independence, higher abstraction", "final_score": 90}
-    ]
+    # Parameter-specific band mappings for unique interpretations
+    PARAMETER_MAPPINGS = {
+        'confidence': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Highly uncertain, needs constant reassurance and encouragement", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Shows hesitation, benefits from positive reinforcement", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Moderate confidence, occasionally needs validation", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Generally confident in abilities and decisions", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "High self-assurance, willing to take intellectual risks", "final_score": 90}
+        ],
+        'working_memory': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Struggles to hold multiple pieces of information simultaneously", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Can handle simple multi-step tasks with external aids", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Manages moderate complexity, benefits from breaking down tasks", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Effectively juggles multiple concepts and information", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "Excellent at managing complex, multi-layered information", "final_score": 90}
+        ],
+        'anxiety': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Calm and relaxed, may need stimulation to stay engaged", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Generally comfortable, occasional mild concerns", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Moderate stress levels, benefits from calming strategies", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Noticeable worry patterns, needs anxiety management techniques", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "High stress response, requires significant emotional support", "final_score": 90}
+        ],
+        'precision': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Tends to be careless, needs explicit accuracy reminders", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Sometimes attentive to details, inconsistent accuracy", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Moderately careful, benefits from checking routines", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Generally accurate and attentive to important details", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "Exceptionally meticulous and detail-oriented", "final_score": 90}
+        ],
+        'error_correction_ability': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Rarely notices or corrects mistakes independently", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Occasionally catches errors with prompting", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Shows awareness of mistakes, improving self-monitoring", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Good at identifying and fixing own errors", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "Excellent self-monitoring and error correction skills", "final_score": 90}
+        ],
+        'impulsivity': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Very thoughtful and deliberate, sometimes overly cautious", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Generally thinks before acting, good self-control", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Moderate impulse control, benefits from pause reminders", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Tends to act quickly, needs impulse management strategies", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "Highly impulsive, requires structured reflection time", "final_score": 90}
+        ],
+        'working_memory_load_handling': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Overwhelmed by complex tasks, needs significant simplification", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Struggles with cognitive overload, benefits from step-by-step guidance", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Manages moderate cognitive demands with support", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Handles complex mental tasks effectively", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "Thrives under high cognitive load and complexity", "final_score": 90}
+        ],
+        'processing_speed': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Works at a slow pace, needs extended time for tasks", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Moderate pace, benefits from untimed activities", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Average processing speed, works well with standard timing", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Quick thinker, processes information efficiently", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "Exceptionally fast processing, ready for rapid-fire challenges", "final_score": 90}
+        ],
+        'exploratory_nature': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Prefers familiar approaches, needs encouragement to try new methods", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Occasionally tries different approaches with guidance", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Shows balanced exploration, benefits from guided discovery", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Highly curious, may need focus on efficient exploration", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "Intense explorer, needs structure to channel curiosity effectively", "final_score": 90}
+        ],
+        'hypothetical_reasoning': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Struggles with 'what if' scenarios, prefers concrete situations", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Can engage with simple hypotheticals with support", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Developing ability to reason about possibilities", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Good at imagining and reasoning through hypothetical situations", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "Excels at abstract thinking and hypothetical problem-solving", "final_score": 90}
+        ],
+        'logical_reasoning': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Difficulty following logical sequences, needs concrete examples", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Can follow simple logical patterns with guidance", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Shows logical thinking, benefits from structured reasoning activities", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Strong logical reasoning and cause-effect understanding", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "Exceptional logical analysis and deductive reasoning skills", "final_score": 90}
+        ],
+        'flexibility': [
+            {"range": (0, 2.0), "band": "B1", "score_range": "0–20", "label": "Very Low", 
+             "interpretation": "Prefers routine and predictability, resists change", "final_score": 10},
+            {"range": (2.1, 4.0), "band": "B2", "score_range": "21–40", "label": "Emerging", 
+             "interpretation": "Can adapt to changes with preparation and support", "final_score": 30},
+            {"range": (4.1, 6.0), "band": "B3", "score_range": "41–60", "label": "Developing", 
+             "interpretation": "Moderately adaptable, benefits from transition strategies", "final_score": 50},
+            {"range": (6.1, 8.0), "band": "B4", "score_range": "61–80", "label": "Proficient", 
+             "interpretation": "Adapts well to new situations and changing requirements", "final_score": 70},
+            {"range": (8.1, 10.0), "band": "B5", "score_range": "81–100", "label": "Advanced", 
+             "interpretation": "Highly adaptable thinker, thrives on variety and change", "final_score": 90}
+        ]
+    }
     
     @staticmethod
-    def get_band_info(raw_score):
-        """Convert 0-10 raw score to band information"""
-        for band_info in CognitiveScoring.BAND_MAPPING:
+    def get_band_info(raw_score, parameter_name):
+        """Convert 0-10 raw score to band information for specific parameter"""
+        parameter_mapping = CognitiveScoring.PARAMETER_MAPPINGS.get(parameter_name)
+        if not parameter_mapping:
+            # Fallback to confidence mapping if parameter not found
+            parameter_mapping = CognitiveScoring.PARAMETER_MAPPINGS['confidence']
+            
+        for band_info in parameter_mapping:
             min_score, max_score = band_info["range"]
             if min_score <= raw_score <= max_score:
                 return band_info
         # Fallback for edge cases
-        return CognitiveScoring.BAND_MAPPING[0] if raw_score < 2.1 else CognitiveScoring.BAND_MAPPING[-1]
+        return parameter_mapping[0] if raw_score < 2.1 else parameter_mapping[-1]
     
     @staticmethod
     def clamp_score(score):
@@ -235,7 +374,7 @@ def compute_scores(assessment: CognitiveAssessment, payload: dict) -> None:
     # Create cognitive parameters structure for API response
     cognitive_parameters = {}
     for param_name, raw_score in parameter_scores.items():
-        band_info = CognitiveScoring.get_band_info(raw_score)
+        band_info = CognitiveScoring.get_band_info(raw_score, param_name)
         cognitive_parameters[param_name] = {
             'raw_score': round(raw_score, 2),
             'band': band_info['band'],

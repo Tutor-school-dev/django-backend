@@ -190,7 +190,7 @@ class AIMatchingService:
                 }
             ],
             max_tokens=self.max_tokens,
-            temperature=0.1,  # Low temperature for consistent results
+            temperature=0.4,  # Moderate temperature for varied but sensible results
         )
         return response.choices[0].message.content.strip()
     
@@ -204,7 +204,7 @@ class AIMatchingService:
             full_prompt,
             generation_config={
                 'max_output_tokens': self.max_tokens,
-                'temperature': 0.1,
+                'temperature': 0.4,
             }
         )
         return response.text.strip()
@@ -249,8 +249,8 @@ class AIMatchingService:
             pedagogy = ','.join([f"{k}:{v}" for k, v in tutor['pedagogy'].items()])
             
             tutors_str.append(
-                f"{tutor['id']} (cog:{tutor['cognitive_score']}/8, "
-                f"subj:{tutor['subject_score']}/10, ₹{tutor['price']}) "
+                f"{tutor['id']} (cog:{tutor['cognitive_score']}/10, "
+                f"subj:{tutor['subject_score']}/10, price:{tutor.get('price_score', 5)}/10, ₹{tutor['price']}) "
                 f"subjects:\"{tutor['subjects']}\" pedagogy:\"{pedagogy}\""
             )
         
@@ -262,25 +262,38 @@ class AIMatchingService:
 Student: confidence={cognitive['confidence']}, anxiety={cognitive['anxiety']}, processing_speed={cognitive['processing_speed']}, working_memory={cognitive['working_memory']}, precision={cognitive['precision']}, error_correction={cognitive['error_correction']}, exploration={cognitive['exploration']}, impulsivity={cognitive['impulsivity']}, logical_reasoning={cognitive['logical_reasoning']}, hypothetical_reasoning={cognitive['hypothetical_reasoning']}
 Subjects: {json.dumps(subjects)}
 
-Tutors (cognitive_score/8, subject_score/10):
+Tutors (cognitive_score/10, subject_score/10, price_score/10):
 {tutors_list}
+
+Matching Priority:
+1. Cognitive compatibility (most important)
+2. Subject overlap 
+3. Price competitiveness
+4. Introduce slight variation in similar matches
 
 Subject matching rules:
 - Handle variations: Maths=Mathematics, Science=Physics/Chemistry/Biology
 - Partial overlap allowed, reward close matches
 - Consider semantic similarity
 
-IMPORTANT: Return ONLY valid JSON - no markdown blocks, no code formatting, no explanations.
+IMPORTANT: 
+- Return ONLY valid JSON - no markdown blocks, no code formatting, no explanations
+- Avoid always picking the same tutors - consider subtle differences
+- When scores are very close, factor in price and minor pedagogical differences
 
 Required JSON format:
-{{"matches":[{{"tutor_id":"id","final_score":85,"reasoning":"High TCS matches low confidence (3). TSPI suits slow processing (2). Strong subject match.","subject_explanation":"Maths matches Mathematics expertise"}}]}}
+{{"matches":[{{"tutor_id":"id","final_score":85,"reasoning":"Strong cognitive match (8.2/10): TCS-HIGH suits low confidence. Good subject overlap. Competitive pricing.","subject_explanation":"Mathematics expertise matches Maths requirement"}}]}}
 
-Rank by: 1)Cognitive compatibility 2)Subject overlap 3)Lower price for ties. Be concise but clear. Return top 3 matches."""
+Return top 3 VARIED matches - avoid repetitive selections."""
 
         return prompt
     
     @staticmethod  
     def generate_cache_key(learner_id, tutors_hash, cognitive_hash):
         """Generate cache key for matching results"""
-        key_data = f"match_{learner_id}_{tutors_hash}_{cognitive_hash}"
+        from django.utils import timezone
+        
+        # Add hour component to introduce some cache variation
+        hour_component = timezone.now().strftime("%Y%m%d%H")
+        key_data = f"match_{learner_id}_{tutors_hash}_{cognitive_hash}_{hour_component}"
         return hashlib.md5(key_data.encode()).hexdigest()[:16]
