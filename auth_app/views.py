@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -150,12 +151,16 @@ class OTPRequestView(APIView):
             )
         
         logger.info(f"OTP sent successfully to {formatted_phone}")
-        return Response({
+        res = {
             'message': 'OTP sent successfully',
             'expires_at': otp_obj.expires_at,
             'phone_number': formatted_phone,
-            'otp': otp_obj.otp
-        }, status=status.HTTP_200_OK)
+        }
+
+        if settings.ENVIRONMENT != 'production':
+            res['otp'] = otp_obj.otp  # For testing purposes only
+            
+        return Response(res, status=status.HTTP_200_OK)
 
 
 class OTPVerifyView(APIView):

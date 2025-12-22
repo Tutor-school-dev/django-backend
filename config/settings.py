@@ -86,11 +86,21 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database Configuration
-ENVIRONMENT = config('ENVIRONMENT', default='staging')
+ENVIRONMENT = config('ENVIRONMENT', default='dev')
 
-if ENVIRONMENT == 'staging':
-    # PostgreSQL with PostGIS (staging)
+# Debug: Print environment on startup
+print(f"Environment detected: {ENVIRONMENT}")
+print(f"Database engine: {'PostgreSQL+PostGIS' if ENVIRONMENT in ['staging', 'production'] else 'SQLite+SpatiaLite'}")
+
+if ENVIRONMENT in ['staging', 'production']:
+    # PostgreSQL with PostGIS (staging/production)
     CA_CERT_PATH = BASE_DIR / 'ca-cert.crt'
+    
+    # Write SSL certificate if provided
+    db_ssl_ca = config('DB_SSL_CA', default='')
+    if db_ssl_ca:
+        with open(CA_CERT_PATH, 'w') as f:
+            f.write(db_ssl_ca)
     
     DATABASES = {
         'default': {
@@ -102,7 +112,7 @@ if ENVIRONMENT == 'staging':
             'PORT': config('DB_PORT'),
             'OPTIONS': {
                 'sslmode': 'require',
-                'sslrootcert': str(CA_CERT_PATH),
+                'sslrootcert': str(CA_CERT_PATH) if db_ssl_ca else None,
             },
         }
     }
