@@ -76,20 +76,22 @@ class OTPService:
             logger.info(f"Attempting to send OTP SMS to {phone_number}")
             message = f"Your TutorSchool verification code is: {otp_code}. Valid for {settings.OTP_EXPIRY_MINUTES} minutes."
             
-            # response = self.sns_client.publish(
-            #     PhoneNumber=phone_number,
-            #     Message=message,
-            #     MessageAttributes={
-            #         'AWS.SNS.SMS.SenderID': {
-            #             'DataType': 'String',
-            #             'StringValue': 'TutorSchool'
-            #         },
-            #         'AWS.SNS.SMS.SMSType': {
-            #             'DataType': 'String',
-            #             'StringValue': 'Transactional'
-            #         }
-            #     }
-            # )
+            if settings.ENVIRONMENT == 'production':
+                response = self.sns_client.publish(
+                    PhoneNumber=phone_number,
+                    Message=message,
+                    MessageAttributes={
+                        'AWS.SNS.SMS.SenderID': {
+                            'DataType': 'String',
+                            'StringValue': 'TutorSchool'
+                        },
+                        'AWS.SNS.SMS.SMSType': {
+                            'DataType': 'String',
+                            'StringValue': 'Transactional'
+                        }
+                    }
+                )
+
             logger.info(f"OTP SMS sent successfully to {phone_number}")
             return True
         except Exception as e:
