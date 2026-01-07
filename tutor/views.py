@@ -97,6 +97,63 @@ class TutorGenericDetailsView(APIView):
         }, status=status.HTTP_200_OK)
     
 
+class TutorPublicGenericDetailsView(APIView):
+
+    def get(self, request):
+        """
+        Public endpoint to get details of all tutors
+        """        
+        city = request.query_params.get('city', '')
+        area = request.query_params.get('area', '')
+        class_level = request.query_params.get('class_level', '')
+        mode_of_teaching = request.query_params.get('mode_of_teaching', 'BOTH')
+        subjects_param = request.query_params.get('subjects', '')
+
+        if mode_of_teaching == 'ONLINE':
+            tutors = Teacher.objects.filter(
+                basic_done=True,
+                location_done=True,
+                teaching_mode__in=['ONLINE', 'BOTH']
+            )
+        elif mode_of_teaching == 'OFFLINE':
+            tutors = Teacher.objects.filter(
+                basic_done=True,
+                location_done=True,
+                teaching_mode__in=['OFFLINE', 'BOTH']
+            )
+        else:
+            tutors = Teacher.objects.filter(
+                basic_done=True,
+                location_done=True
+            )
+
+        if city:
+            tutors = tutors.filter(city__iexact=city)
+        if area:
+            tutors = tutors.filter(area__iexact=area)
+        if class_level:
+            tutors = tutors.filter(class_level__iexact=class_level)
+
+        # Parse subjects from comma-separated string
+        subjects = []
+        if subjects_param:
+            subjects = [s.strip() for s in subjects_param.split(',') if s.strip()]
+        
+        if subjects:
+            subject_queries = Q()
+            for subject in subjects:
+                # Search for subject in JSON string (e.g., ["Maths", "Science"])
+                subject_queries |= Q(subjects__icontains=f'"{subject}"')
+            
+            tutors = tutors.filter(subject_queries)
+        
+        tutors_data = TutorSerializer(tutors, many=True).data
+        
+        return Response({
+            'tutors': tutors_data
+        }, status=status.HTTP_200_OK)
+
+
 class CreateTutorAccountView(APIView):
     """Create a new tutor account with access hash verification"""
     permission_classes = [AllowAny]
