@@ -110,7 +110,7 @@ Authorization: Bearer <access_token>
 ```json
 {
   "success": true,
-  "payment_url": "https://smartgatewayuat.hdfcbank.com/pay/...",
+  "payment_url": "https://smartgatewayuat.hdfc.bank.com/pay/...",
   "order_id": "TS_12345678_1_20240115120000",
   "amount": 300.0,
   "subscription": "Basic",
@@ -263,7 +263,7 @@ python manage.py populate_subscriptions
 Ensure these are set in `.env`:
 ```
 HDFC_API_KEY=your_api_key
-HDFC_PAYMENT_URL=https://smartgatewayuat.hdfcbank.com
+HDFC_PAYMENT_URL=https://smartgatewayuat.hdfc.bank.com
 HDFC_MERCHANT_ID=your_merchant_id
 HDFC_CLIENT_ID=your_client_id
 HDFC_RETURN_URL=https://api.tutorschool.com/api/subscriptions/payment-callback/

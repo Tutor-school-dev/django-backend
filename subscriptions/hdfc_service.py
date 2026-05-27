@@ -93,6 +93,7 @@ class HDFCPaymentService:
                 'payment_page_client_id': self.client_id,
                 'action': 'paymentPage',
                 'return_url': self.return_url,
+                'client_return_url': self.client_return_url,  # Frontend URL for post-payment redirect
                 
                 # User Defined Fields (UDF) - custom data
                 'udf1': str(duration_months),  # Duration in months (12/6/3)

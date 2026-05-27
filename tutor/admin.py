@@ -15,7 +15,7 @@ class TeacherAdmin(GISModelAdmin):
             'fields': ('id', 'name', 'email', 'primary_contact', 'secondary_contact', 'zoho_id')
         }),
         ('Location', {
-            'fields': ('state', 'area', 'pincode', 'location', 'latitude', 'longitude')
+            'fields': ('state', 'city', 'area', 'pincode', 'location', 'latitude', 'longitude')
         }),
         ('Profile', {
             'fields': ('profile_pic', 'introduction', 'teaching_desc', 'video_url', 'lesson_price', 

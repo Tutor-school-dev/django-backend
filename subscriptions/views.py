@@ -126,7 +126,7 @@ class StartPaymentView(APIView):
                 
                 return Response({
                     'success': True,
-                    'payment_url': payment_response['payment_url'],
+                    'payment_url': payment_response['url'],
                     'order_id': order_id,
                     'amount': amount,
                     'subscription': subscription.name,
