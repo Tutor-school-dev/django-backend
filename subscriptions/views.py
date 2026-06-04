@@ -314,18 +314,15 @@ class PaymentWebhookView(APIView):
     def post(self, request):
         """Process HDFC webhook"""
         try:
-            # Verify HDFC Basic Auth credentials
             hdfc_service = HDFCPaymentService()
-            auth_header = request.headers.get('Authorization', '')
-            if not hdfc_service.verify_webhook_auth(auth_header):
-                # Log masked header to diagnose what HDFC is actually sending
-                masked = auth_header[:10] + '...' if len(auth_header) > 10 else repr(auth_header)
-                logger.warning(f"Webhook rejected: invalid or missing Basic Auth credentials. Received header: {masked}")
-                return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
-
             webhook_data = request.data
-            
-            logger.info(f"Received HDFC webhook: {webhook_data.get('event_name')}")
+
+            logger.info(f"Received HDFC webhook raw payload: {dict(webhook_data)}")
+
+            # Verify HMAC-SHA256 signature HDFC includes in the payload
+            if not hdfc_service.verify_webhook_signature(webhook_data):
+                logger.warning("Webhook rejected: HMAC-SHA256 signature mismatch")
+                return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
             
             # Parse webhook data using service
             parsed_data = hdfc_service.parse_webhook_data(webhook_data)
@@ -338,8 +335,7 @@ class PaymentWebhookView(APIView):
             
             order_id = parsed_data.get('order_id')
             order_status = parsed_data.get('status')
-            event_name = parsed_data.get('event_name')
-            
+
             # Get payment record
             try:
                 payment = Payment.objects.select_related('teacher', 'subscription').get(order_id=order_id)
@@ -349,8 +345,8 @@ class PaymentWebhookView(APIView):
                     'error': 'Payment not found'
                 }, status=status.HTTP_404_NOT_FOUND)
             
-            # Process based on event
-            if event_name == 'ORDER_CHARGED' and order_status == 'CHARGED':
+            # Process based on status (HDFC flat webhook has no event_name field)
+            if order_status == 'CHARGED':
                 # Only process if payment is still pending
                 if payment.status == Payment.STATUS_PENDING:
                     with transaction.atomic():
@@ -395,7 +391,7 @@ class PaymentWebhookView(APIView):
                     'message': 'Webhook processed successfully'
                 }, status=status.HTTP_200_OK)
             
-            elif event_name in ['AUTO_REFUND', 'ORDER_REFUNDED']:
+            elif order_status == 'REFUNDED':
                 # Handle refund
                 if payment.status == Payment.STATUS_CHARGED:
                     payment.status = Payment.STATUS_REFUNDED
@@ -429,7 +425,7 @@ class PaymentWebhookView(APIView):
                 }, status=status.HTTP_200_OK)
             
             # Unknown event or status
-            logger.warning(f"Webhook: Unhandled event - {event_name}, status={order_status}, order_id={order_id}")
+            logger.warning(f"Webhook: Unhandled status={order_status}, order_id={order_id}")
             
             return Response({
                 'success': True,

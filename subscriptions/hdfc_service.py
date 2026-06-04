@@ -2,6 +2,8 @@
 HDFC Payment Gateway Integration Service
 """
 import base64
+import hashlib
+import hmac
 import json
 import requests
 from decimal import Decimal
@@ -26,20 +28,36 @@ class HDFCPaymentService:
         self.webhook_username = settings.HDFC_WEBHOOK_USERNAME
         self.webhook_password = settings.HDFC_WEBHOOK_PASSWORD
 
-    def verify_webhook_auth(self, auth_header: str) -> bool:
+    def verify_webhook_signature(self, webhook_data: dict) -> bool:
         """
-        Verify the Basic Auth header HDFC sends with every webhook request.
-        HDFC sends: Authorization: Basic {base64(username:password)}
-        Returns True if credentials match, False otherwise.
+        Verify the HMAC-SHA256 signature HDFC includes in the webhook payload.
+        HDFC sends: signature field = HMAC-SHA256(order_id + status_id, webhook_encryption_key)
+        Returns True if signature matches or if no encryption key is configured.
         """
-        if not auth_header or not auth_header.startswith('Basic '):
-            return False
+        encryption_key = getattr(settings, 'HDFC_WEBHOOK_ENCRYPTION_KEY', '')
+        if not encryption_key:
+            # Key not configured — skip verification but log a warning
+            logger.warning("HDFC_WEBHOOK_ENCRYPTION_KEY not set; skipping signature verification")
+            return True
         try:
-            encoded = auth_header.split(' ', 1)[1]
-            decoded = base64.b64decode(encoded).decode('utf-8')
-            username, password = decoded.split(':', 1)
-            return username == self.webhook_username and password == self.webhook_password
+            def get_val(key):
+                val = webhook_data.get(key, '')
+                return val[0] if isinstance(val, list) else val
+
+            order_id = get_val('order_id')
+            status_id = get_val('status_id')
+            received_signature = get_val('signature')
+
+            message = f"{order_id}{status_id}"
+            expected = hmac.new(
+                encryption_key.encode('utf-8'),
+                message.encode('utf-8'),
+                hashlib.sha256
+            ).digest()
+            expected_b64 = base64.b64encode(expected).decode('utf-8')
+            return hmac.compare_digest(expected_b64, received_signature)
         except Exception:
+            logger.exception("Error verifying webhook signature")
             return False
     
     def _get_auth_header(self):
@@ -56,7 +74,7 @@ class HDFCPaymentService:
         Max length: 3 + 8 + 1 + 1 + 1 + 14 = 28 chars
         """
         short_teacher_id = str(teacher_id).replace('-', '')[:8]
-        order_id = f"TS_{short_teacher_id}_{subscription_id}_{timestamp}"
+        order_id = f"TS_{short_teacher_id}_{timestamp}"
         assert len(order_id) <= 30, f"order_id too long: {len(order_id)} chars"
         return order_id
     
@@ -113,8 +131,7 @@ class HDFCPaymentService:
                 'customer_phone': teacher_phone,
                 'payment_page_client_id': self.client_id,
                 'action': 'paymentPage',
-                'return_url': self.return_url,
-                'client_return_url': self.client_return_url,  # Frontend URL for post-payment redirect
+                'return_url': self.client_return_url,  # Browser redirect URL after payment (frontend page)
                 
                 # User Defined Fields (UDF) - custom data
                 'udf1': str(duration_months),  # Duration in months (12/6/3)
@@ -282,57 +299,42 @@ class HDFCPaymentService:
     
     def parse_webhook_data(self, webhook_data: dict) -> dict:
         """
-        Parse webhook data from HDFC gateway
-        Webhook structure: {"event_name": "ORDER_CHARGED", "content": {"order": {...}}}
-        
-        Args:
-            webhook_data: POST data received on webhook URL
-        
-        Returns:
-            dict: Parsed payment result
+        Parse webhook data from HDFC gateway.
+        HDFC sends a flat form-encoded POST (QueryDict) where all values are lists:
+        {
+            'status': ['CHARGED'],
+            'order_id': ['TS_...'],
+            'signature': ['...'],
+            'signature_algorithm': ['HMAC-SHA256'],
+            'status_id': ['21'],
+        }
+        status_id reference: 21=CHARGED, 22=FAILED, 26=CANCELLED
         """
         try:
-            event_name = webhook_data.get('event_name', '')
-            order_data = webhook_data.get('content', {}).get('order', {})
-            
-            if not order_data:
+            def get_val(key):
+                """Extract first element from list value or return string directly."""
+                val = webhook_data.get(key, '')
+                return val[0] if isinstance(val, list) else val
+
+            order_id = get_val('order_id')
+            order_status = get_val('status').upper()
+            status_id = get_val('status_id')
+
+            if not order_id:
                 return {
                     'error': 'Invalid webhook data structure',
-                    'details': 'Missing order data in webhook payload'
+                    'details': 'Missing order_id in webhook payload'
                 }
-            
-            # Parse status - HDFC sends: CHARGED, AUTHORIZATION_FAILED, etc.
-            order_status = order_data.get('status', '').upper()
-            
-            result = {
-                'event_name': event_name,
-                'order_id': order_data.get('order_id'),
+
+            return {
+                'order_id': order_id,
                 'status': order_status,
-                'amount': order_data.get('amount'),
-                'payment_method_type': order_data.get('payment_method_type'),
-                'refunded': order_data.get('refunded', False),
-                'amount_refunded': order_data.get('amount_refunded', 0),
-                'trn_id': order_data.get('trn_id'),
-                'bank_error_message': order_data.get('bank_error_message'),
-                'customer_id': order_data.get('customer_id'),
-                'customer_email': order_data.get('customer_email'),
-                'customer_phone': order_data.get('customer_phone'),
-                
-                # UDF fields
-                'duration_months': order_data.get('udf1'),  # Duration
-                'model_type': order_data.get('udf2'),  # TEACHER/LEARNER
-                'subscription_id': order_data.get('udf3'),  # Subscription ID
-                'payment_type': order_data.get('udf4'),  # SUBSCRIPTION
-                'teacher_name': order_data.get('udf5'),  # Optional teacher name
-                
-                # Transaction details
-                'transaction_id': order_data.get('txn_detail', {}).get('trn_id'),
-                
+                'status_id': status_id,
+                'signature': get_val('signature'),
+                'signature_algorithm': get_val('signature_algorithm'),
                 'is_success': order_status == 'CHARGED',
             }
-            
-            return result
-        
+
         except Exception as e:
             logger.exception("Error parsing HDFC webhook data")
             return {
