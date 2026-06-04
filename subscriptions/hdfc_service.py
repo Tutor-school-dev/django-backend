@@ -23,6 +23,24 @@ class HDFCPaymentService:
         self.client_id = settings.HDFC_CLIENT_ID
         self.return_url = settings.HDFC_RETURN_URL
         self.client_return_url = settings.HDFC_CLIENT_RETURN_URL
+        self.webhook_username = settings.HDFC_WEBHOOK_USERNAME
+        self.webhook_password = settings.HDFC_WEBHOOK_PASSWORD
+
+    def verify_webhook_auth(self, auth_header: str) -> bool:
+        """
+        Verify the Basic Auth header HDFC sends with every webhook request.
+        HDFC sends: Authorization: Basic {base64(username:password)}
+        Returns True if credentials match, False otherwise.
+        """
+        if not auth_header or not auth_header.startswith('Basic '):
+            return False
+        try:
+            encoded = auth_header.split(' ', 1)[1]
+            decoded = base64.b64decode(encoded).decode('utf-8')
+            username, password = decoded.split(':', 1)
+            return username == self.webhook_username and password == self.webhook_password
+        except Exception:
+            return False
     
     def _get_auth_header(self):
         """Generate Base64 encoded Authorization header"""
@@ -33,11 +51,14 @@ class HDFCPaymentService:
     
     def generate_order_id(self, teacher_id: str, subscription_id: int, timestamp: str) -> str:
         """
-        Generate unique order ID for payment
+        Generate unique order ID for payment within 30 chars.
         Format: TS_{teacher_id[:8]}_{sub_id}_{timestamp}
+        Max length: 3 + 8 + 1 + 1 + 1 + 14 = 28 chars
         """
         short_teacher_id = str(teacher_id).replace('-', '')[:8]
-        return f"TS_{short_teacher_id}_{subscription_id}_{timestamp}"
+        order_id = f"TS_{short_teacher_id}_{subscription_id}_{timestamp}"
+        assert len(order_id) <= 30, f"order_id too long: {len(order_id)} chars"
+        return order_id
     
     def create_payment_session(
         self,

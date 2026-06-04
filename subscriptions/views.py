@@ -314,12 +314,18 @@ class PaymentWebhookView(APIView):
     def post(self, request):
         """Process HDFC webhook"""
         try:
+            # Verify HDFC Basic Auth credentials
+            hdfc_service = HDFCPaymentService()
+            auth_header = request.headers.get('Authorization', '')
+            if not hdfc_service.verify_webhook_auth(auth_header):
+                logger.warning("Webhook rejected: invalid or missing Basic Auth credentials")
+                return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
+
             webhook_data = request.data
             
             logger.info(f"Received HDFC webhook: {webhook_data.get('event_name')}")
             
             # Parse webhook data using service
-            hdfc_service = HDFCPaymentService()
             parsed_data = hdfc_service.parse_webhook_data(webhook_data)
             
             if 'error' in parsed_data:
