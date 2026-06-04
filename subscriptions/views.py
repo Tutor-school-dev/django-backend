@@ -318,7 +318,9 @@ class PaymentWebhookView(APIView):
             hdfc_service = HDFCPaymentService()
             auth_header = request.headers.get('Authorization', '')
             if not hdfc_service.verify_webhook_auth(auth_header):
-                logger.warning("Webhook rejected: invalid or missing Basic Auth credentials")
+                # Log masked header to diagnose what HDFC is actually sending
+                masked = auth_header[:10] + '...' if len(auth_header) > 10 else repr(auth_header)
+                logger.warning(f"Webhook rejected: invalid or missing Basic Auth credentials. Received header: {masked}")
                 return Response({'error': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
 
             webhook_data = request.data
